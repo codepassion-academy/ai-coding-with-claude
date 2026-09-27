@@ -1,5 +1,5 @@
 import { priceCart, type CartLine, type PricedLine } from "./cart.ts"
-import { CouponError, discountFor, findCoupon } from "./coupons.ts"
+import { CouponError, findCoupon, validateCoupon } from "./coupons.ts"
 
 export type Quote = {
   lines: PricedLine[]
@@ -15,7 +15,7 @@ export type CheckoutRequest = {
 }
 
 /** Build a price quote for a cart, applying a coupon when one is given. */
-export function quote(req: CheckoutRequest): Quote {
+export function quote(req: CheckoutRequest, now: Date): Quote {
   const { lines, subtotalSatang } = priceCart(req.items)
 
   const code = req.couponCode?.trim()
@@ -24,6 +24,9 @@ export function quote(req: CheckoutRequest): Quote {
   const coupon = findCoupon(code)
   if (!coupon) throw new CouponError("unknown")
 
-  const discountSatang = discountFor(coupon, subtotalSatang)
+  const result = validateCoupon(coupon, { subtotalSatang, now })
+  if (!result.ok) throw new CouponError(result.reason)
+
+  const discountSatang = result.discountSatang
   return { lines, subtotalSatang, discountSatang, totalSatang: subtotalSatang - discountSatang, couponCode: coupon.code }
 }

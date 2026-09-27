@@ -29,17 +29,30 @@ export function findCoupon(code: string): Coupon | undefined {
   return coupons.get(normalizeCode(code))
 }
 
-/** Discount in satang for a subtotal. Never more than the subtotal. */
+/** Discount in satang for a subtotal. Respects the coupon's cap and never exceeds the subtotal. */
 export function discountFor(coupon: Coupon, subtotalSatang: number): number {
   const raw =
     coupon.kind === "fixed"
       ? (coupon.valueSatang ?? 0)
       : Math.floor((subtotalSatang * (coupon.percent ?? 0)) / 100)
-  return Math.min(raw, subtotalSatang)
+  const capped = coupon.maxDiscountSatang === undefined ? raw : Math.min(raw, coupon.maxDiscountSatang)
+  return Math.min(capped, subtotalSatang)
+}
+
+export type RejectReason = "unknown" | "expired" | "below_minimum" | "used_up"
+
+export type Validation = { ok: true; discountSatang: number } | { ok: false; reason: RejectReason }
+
+/** Check a coupon's rules for this cart. `reason` is for logs and tests only, never for clients. */
+export function validateCoupon(coupon: Coupon, ctx: { subtotalSatang: number; now: Date }): Validation {
+  if (ctx.now.getTime() >= coupon.expiresAt.getTime()) return { ok: false, reason: "expired" }
+  if (ctx.subtotalSatang < coupon.minSubtotalSatang) return { ok: false, reason: "below_minimum" }
+  if (coupon.usedCount >= coupon.usageLimit) return { ok: false, reason: "used_up" }
+  return { ok: true, discountSatang: discountFor(coupon, ctx.subtotalSatang) }
 }
 
 export class CouponError extends Error {
-  constructor(readonly reason: string) {
+  constructor(readonly reason: RejectReason) {
     super(`coupon rejected: ${reason}`)
   }
 }

@@ -10,7 +10,7 @@
 - [x] 2. คูปองแบบเปอร์เซ็นต์ และส่วนลดไม่เกินยอดสินค้า
   - Files: `src/coupons.ts`
   - Test first: percent rounds down (COUP-REQ-002) · fixed larger than subtotal caps at subtotal (COUP-REQ-003)
-- [ ] 3. กติกาของคูปองใน `validateCoupon`: เพดาน หมดอายุ ยอดขั้นต่ำ จำนวนครั้ง
+- [x] 3. กติกาของคูปองใน `validateCoupon`: เพดาน หมดอายุ ยอดขั้นต่ำ จำนวนครั้ง
   - Files: `src/coupons.ts`, `src/checkout.ts` (ส่ง `now`)
   - Test first: cap (COUP-REQ-004) · expired incl. exact boundary (COUP-REQ-005) · min subtotal (COUP-REQ-006) · usage limit (COUP-REQ-007)
 - [ ] 4. ปฏิเสธด้วยข้อความเดียว และจำกัดการลองโค้ดผิด
@@ -25,3 +25,5 @@
 ## Decisions made while building
 
 <!-- Append as you go: what changed from the plan, and why. -->
+
+- Step 3: `handle` in `src/app.ts` also takes a context `{ now }` so API tests can control time (not in the plan's file list).

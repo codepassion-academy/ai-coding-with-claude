@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest"
 import { quote } from "../src/checkout.ts"
+
+const now = new Date("2026-09-30T19:00:00+07:00")
 import { formatBaht } from "../src/money.ts"
 
 describe("quote", () => {
   it("returns subtotal = total with no discount", () => {
-    const q = quote({ items: [{ productId: "hoodie", qty: 1 }] })
+    const q = quote({ items: [{ productId: "hoodie", qty: 1 }] }, now)
     expect(q.subtotalSatang).toBe(129_000)
     expect(q.discountSatang).toBe(0)
     expect(q.totalSatang).toBe(129_000)
@@ -20,17 +22,17 @@ describe("formatBaht", () => {
 
 describe("quote with a coupon", () => {
   it("lowers the total by the coupon discount (COUP-REQ-001)", () => {
-    const q = quote({ items: [{ productId: "tee-black", qty: 1 }], couponCode: "welcome100" })
+    const q = quote({ items: [{ productId: "tee-black", qty: 1 }], couponCode: "welcome100" }, now)
     expect(q.discountSatang).toBe(10_000)
     expect(q.totalSatang).toBe(35_000)
     expect(q.couponCode).toBe("WELCOME100")
   })
 
   it("treats a blank coupon code as no coupon", () => {
-    expect(quote({ items: [{ productId: "mug", qty: 1 }], couponCode: "   " }).discountSatang).toBe(0)
+    expect(quote({ items: [{ productId: "mug", qty: 1 }], couponCode: "   " }, now).discountSatang).toBe(0)
   })
 
   it("rejects an unknown coupon", () => {
-    expect(() => quote({ items: [{ productId: "mug", qty: 1 }], couponCode: "NOPE" })).toThrow(/coupon rejected/)
+    expect(() => quote({ items: [{ productId: "mug", qty: 1 }], couponCode: "NOPE" }, now)).toThrow(/coupon rejected/)
   })
 })

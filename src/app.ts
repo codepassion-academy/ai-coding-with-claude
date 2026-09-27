@@ -5,8 +5,10 @@ import { products } from "./products.ts"
 
 export type Response = { status: number; body: unknown }
 
+export type Context = { now: Date }
+
 /** Route one request. Kept free of node:http so it is easy to test. */
-export function handle(method: string, path: string, body: unknown): Response {
+export function handle(method: string, path: string, body: unknown, ctx: Context = { now: new Date() }): Response {
   if (method === "GET" && path === "/products") {
     return { status: 200, body: [...products.values()] }
   }
@@ -14,7 +16,7 @@ export function handle(method: string, path: string, body: unknown): Response {
   if (method === "POST" && path === "/checkout/quote") {
     if (!isCheckoutRequest(body)) return { status: 400, body: { error: "items must be an array of { productId, qty }; couponCode must be a string" } }
     try {
-      const q = quote(body)
+      const q = quote(body, ctx.now)
       return {
         status: 200,
         body: {
