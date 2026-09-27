@@ -28,3 +28,19 @@ describe("handle", () => {
     expect(handle("GET", "/nope", undefined).status).toBe(404)
   })
 })
+
+describe("handle with a coupon", () => {
+  it("returns the discount and the coupon used (COUP-REQ-001)", () => {
+    const res = handle("POST", "/checkout/quote", { items: [{ productId: "hoodie", qty: 1 }], couponCode: "SUMMER10" })
+    expect(res.status).toBe(200)
+    expect(res.body).toMatchObject({ subtotalSatang: 129_000, discountSatang: 12_900, totalSatang: 116_100, couponCode: "SUMMER10" })
+  })
+
+  it("returns 400 when couponCode is not a string", () => {
+    expect(handle("POST", "/checkout/quote", { items: [{ productId: "mug", qty: 1 }], couponCode: 42 }).status).toBe(400)
+  })
+
+  it("returns 422 for a coupon that cannot be used", () => {
+    expect(handle("POST", "/checkout/quote", { items: [{ productId: "mug", qty: 1 }], couponCode: "NOPE" }).status).toBe(422)
+  })
+})

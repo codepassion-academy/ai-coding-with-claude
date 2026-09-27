@@ -1,5 +1,6 @@
 import { CartError } from "./cart.ts"
 import { quote, type CheckoutRequest } from "./checkout.ts"
+import { CouponError } from "./coupons.ts"
 import { products } from "./products.ts"
 
 export type Response = { status: number; body: unknown }
@@ -11,7 +12,7 @@ export function handle(method: string, path: string, body: unknown): Response {
   }
 
   if (method === "POST" && path === "/checkout/quote") {
-    if (!isCheckoutRequest(body)) return { status: 400, body: { error: "items must be an array of { productId, qty }" } }
+    if (!isCheckoutRequest(body)) return { status: 400, body: { error: "items must be an array of { productId, qty }; couponCode must be a string" } }
     try {
       const q = quote(body)
       return {
@@ -20,11 +21,13 @@ export function handle(method: string, path: string, body: unknown): Response {
           lines: q.lines.map((l) => ({ productId: l.product.id, qty: l.qty, lineTotalSatang: l.lineTotalSatang })),
           subtotalSatang: q.subtotalSatang,
           discountSatang: q.discountSatang,
-          totalSatang: q.totalSatang
+          totalSatang: q.totalSatang,
+          ...(q.couponCode ? { couponCode: q.couponCode } : {})
         }
       }
     } catch (err) {
       if (err instanceof CartError) return { status: 400, body: { error: err.message } }
+      if (err instanceof CouponError) return { status: 422, body: { error: err.reason } }
       throw err
     }
   }
@@ -34,7 +37,8 @@ export function handle(method: string, path: string, body: unknown): Response {
 
 function isCheckoutRequest(body: unknown): body is CheckoutRequest {
   if (typeof body !== "object" || body === null) return false
-  const items = (body as { items?: unknown }).items
+  const { items, couponCode } = body as { items?: unknown; couponCode?: unknown }
+  if (couponCode !== undefined && typeof couponCode !== "string") return false
   return (
     Array.isArray(items) &&
     items.every((i) => typeof i === "object" && i !== null && typeof i.productId === "string" && typeof i.qty === "number")

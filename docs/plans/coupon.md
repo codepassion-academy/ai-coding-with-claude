@@ -4,10 +4,10 @@
 
 ## Steps
 
-- [ ] 1. Tracer bullet: คูปองแบบ fixed วิ่งผ่าน API → quote → coupon store
+- [x] 1. Tracer bullet: คูปองแบบ fixed วิ่งผ่าน API → quote → coupon store
   - Files: `src/coupons.ts` (ใหม่), `src/checkout.ts`, `src/app.ts`
   - Test first: quote with a fixed coupon lowers the total (COUP-REQ-001) · API returns discount (COUP-REQ-001)
-- [ ] 2. คูปองแบบเปอร์เซ็นต์ และส่วนลดไม่เกินยอดสินค้า
+- [x] 2. คูปองแบบเปอร์เซ็นต์ และส่วนลดไม่เกินยอดสินค้า
   - Files: `src/coupons.ts`
   - Test first: percent rounds down (COUP-REQ-002) · fixed larger than subtotal caps at subtotal (COUP-REQ-003)
 - [ ] 3. กติกาของคูปองใน `validateCoupon`: เพดาน หมดอายุ ยอดขั้นต่ำ จำนวนครั้ง
