@@ -13,7 +13,7 @@
 - [x] 3. กติกาของคูปองใน `validateCoupon`: เพดาน หมดอายุ ยอดขั้นต่ำ จำนวนครั้ง
   - Files: `src/coupons.ts`, `src/checkout.ts` (ส่ง `now`)
   - Test first: cap (COUP-REQ-004) · expired incl. exact boundary (COUP-REQ-005) · min subtotal (COUP-REQ-006) · usage limit (COUP-REQ-007)
-- [ ] 4. ปฏิเสธด้วยข้อความเดียว และจำกัดการลองโค้ดผิด
+- [x] 4. ปฏิเสธด้วยข้อความเดียว และจำกัดการลองโค้ดผิด
   - Files: `src/rate-limit.ts` (ใหม่), `src/app.ts`, `src/server.ts`
   - Test first: every rejection gives the same 422 body (COUP-REQ-008) · 6th failure in 10 min gives 429 (COUP-REQ-009)
 
@@ -27,3 +27,4 @@
 <!-- Append as you go: what changed from the plan, and why. -->
 
 - Step 3: `handle` in `src/app.ts` also takes a context `{ now }` so API tests can control time (not in the plan's file list).
+- Step 4: `src/app.ts` now exports `createApp(limiter)` so each test gets a fresh rate limiter; `handle` stays as the default instance. Found in the REVIEW.md security pass: rejections used to return the internal reason.

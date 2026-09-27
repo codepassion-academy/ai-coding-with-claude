@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { handle } from "../src/app.ts"
+import { createApp, handle } from "../src/app.ts"
 
 describe("handle", () => {
   it("lists products", () => {
@@ -31,7 +31,7 @@ describe("handle", () => {
 
 describe("handle with a coupon", () => {
   it("returns the discount and the coupon used (COUP-REQ-001)", () => {
-    const res = handle("POST", "/checkout/quote", { items: [{ productId: "hoodie", qty: 1 }], couponCode: "SUMMER10" }, { now: new Date("2026-09-30T12:00:00Z") })
+    const res = handle("POST", "/checkout/quote", { items: [{ productId: "hoodie", qty: 1 }], couponCode: "SUMMER10" }, { now: new Date("2026-09-30T12:00:00Z"), ip: "1.1.1.1" })
     expect(res.status).toBe(200)
     expect(res.body).toMatchObject({ subtotalSatang: 129_000, discountSatang: 12_900, totalSatang: 116_100, couponCode: "SUMMER10" })
   })
@@ -41,10 +41,40 @@ describe("handle with a coupon", () => {
   })
 
   it("returns 422 for an expired coupon", () => {
-    expect(handle("POST", "/checkout/quote", { items: [{ productId: "mug", qty: 1 }], couponCode: "EXPIRED5" }, { now: new Date("2026-09-30T12:00:00Z") }).status).toBe(422)
+    expect(handle("POST", "/checkout/quote", { items: [{ productId: "mug", qty: 1 }], couponCode: "EXPIRED5" }, { now: new Date("2026-09-30T12:00:00Z"), ip: "1.1.1.1" }).status).toBe(422)
   })
 
   it("returns 422 for a coupon that cannot be used", () => {
     expect(handle("POST", "/checkout/quote", { items: [{ productId: "mug", qty: 1 }], couponCode: "NOPE" }).status).toBe(422)
+  })
+})
+
+describe("coupon rejections and rate limit (step 4)", () => {
+  const items = [{ productId: "mug", qty: 1 }]
+  const at = (minute: number) => ({ now: new Date(Date.UTC(2026, 8, 30, 12, minute)), ip: "9.9.9.9" })
+
+  it("gives every rejection the same 422 body (COUP-REQ-008)", () => {
+    const app = createApp()
+    const bodies = ["NOPE", "EXPIRED5", "LASTONE"].map((couponCode) => app("POST", "/checkout/quote", { items, couponCode }, at(0)))
+    expect(bodies.map((b) => b.status)).toEqual([422, 422, 422])
+    expect(new Set(bodies.map((b) => JSON.stringify(b.body))).size).toBe(1)
+  })
+
+  it("blocks the 6th failed attempt within 10 minutes (COUP-REQ-009)", () => {
+    const app = createApp()
+    for (let i = 0; i < 5; i++) expect(app("POST", "/checkout/quote", { items, couponCode: "NOPE" }, at(i)).status).toBe(422)
+    expect(app("POST", "/checkout/quote", { items, couponCode: "WELCOME100" }, at(5)).status).toBe(429)
+  })
+
+  it("allows coupons again once the window has passed (COUP-REQ-009)", () => {
+    const app = createApp()
+    for (let i = 0; i < 5; i++) app("POST", "/checkout/quote", { items, couponCode: "NOPE" }, at(0))
+    expect(app("POST", "/checkout/quote", { items, couponCode: "WELCOME100" }, at(11)).status).toBe(200)
+  })
+
+  it("does not rate-limit quotes without a coupon", () => {
+    const app = createApp()
+    for (let i = 0; i < 5; i++) app("POST", "/checkout/quote", { items, couponCode: "NOPE" }, at(0))
+    expect(app("POST", "/checkout/quote", { items }, at(1)).status).toBe(200)
   })
 })

@@ -16,7 +16,7 @@ createServer((req, res) => {
         return
       }
     }
-    const { status, body: out } = handle(req.method ?? "GET", new URL(req.url ?? "/", "http://x").pathname, body, { now: new Date() })
+    const { status, body: out } = handle(req.method ?? "GET", new URL(req.url ?? "/", "http://x").pathname, body, { now: new Date(), ip: req.socket.remoteAddress ?? "unknown" })
     res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify(out))
   })
 }).listen(port, () => console.log(`shop listening on http://localhost:${port}`))
