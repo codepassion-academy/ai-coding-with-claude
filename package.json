@@ -1,0 +1,23 @@
+{
+  "name": "ai-coding-with-claude",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Sample shop checkout used in the AI Coding with Claude course by CodePassion Academy",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.2"
+  }
+}
