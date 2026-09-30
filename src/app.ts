@@ -37,7 +37,7 @@ export function createApp(deps: AppDeps): typeof handle {
     }
 
     if (method === "POST" && path === "/reports") {
-      const checked = validateReportInput(body)
+      const checked = validateReportInput(body, ctx.now)
       if (!checked.ok) return { status: 400, body: { error: "invalid report", fields: checked.fields } }
       const { districtId, landmark, depthCm, observedAt } = checked.input
       const report: Report = {

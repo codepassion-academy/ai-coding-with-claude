@@ -58,6 +58,28 @@ describe("POST /reports", () => {
     expect(store.all()).toHaveLength(0)
   })
 
+  it("RPT-REQ-001 AC3 keeps unknown fields out of the store and the response", () => {
+    const { app, store } = setup()
+    const res = app("POST", "/reports", { ...validReport, phone: "0812345678", name: "สมชาย" }, { now: NOW, clientIp: IP })
+    expect(res.status).toBe(201)
+    expect(JSON.stringify([res.body, store.all()])).not.toMatch(/phone|name|0812345678|สมชาย/)
+  })
+
+  it("RPT-REQ-004 AC3 stores server time for a report seen up to 2 minutes ahead", () => {
+    const { app, store } = setup()
+    const res = app("POST", "/reports", { ...validReport, observedAt: "2026-09-30T12:32:00Z" }, { now: NOW, clientIp: IP })
+    expect(res.status).toBe(201)
+    expect(store.all()[0]?.observedAt).toBe("2026-09-30T12:30:00.000Z")
+  })
+
+  it("RPT-REQ-005 AC6 AC7 answers 400 with field names only, never the submitted values", () => {
+    const { app, store } = setup()
+    const res = app("POST", "/reports", { ...validReport, districtId: "x-marks-the-spot", depthCm: 0 }, { now: NOW, clientIp: IP })
+    expect(res.status).toBe(400)
+    expect(res.body).toEqual({ error: "invalid report", fields: ["districtId", "depthCm"] })
+    expect(store.all()).toHaveLength(0)
+  })
+
   it("RPT-REQ-012 AC4 does not store severity", () => {
     const { app, store } = setup()
     app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
