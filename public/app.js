@@ -6,14 +6,9 @@
   const DEPTH_TH = { ankle: "ข้อเท้า", knee: "เข่า", waist: "เอว" }
   const REFRESH_MS = 60 * 1000
   const TILES_URL = "/tiles/bangkok.pmtiles"
-  // Rough district centres [lon, lat]. The API stores no coordinates (spec §5, RPT-REQ-013),
-  // so pins sit near these points. Approximate on purpose.
-  const CENTRES = {
-    "don-mueang": [100.595, 13.915], "sai-mai": [100.66, 13.905], "bang-khen": [100.625, 13.865],
-    "lat-phrao": [100.61, 13.815], "chatuchak": [100.56, 13.83], "din-daeng": [100.553, 13.775],
-    "huai-khwang": [100.585, 13.765], "bang-kapi": [100.645, 13.772], "pathum-wan": [100.53, 13.742],
-    "khlong-toei": [100.565, 13.71], "bang-na": [100.615, 13.668], "lat-krabang": [100.755, 13.74]
-  }
+  // กึ่งกลางเขต [lon, lat] by district id, from GET /districts. The API stores no coordinates
+  // for reports (spec §5, RPT-REQ-013), so pins sit near these points. Approximate on purpose.
+  let CENTRES = {}
   const BOUNDS = [[100.3, 13.5], [100.95, 14.05]]
   // The whole demo scene (city-wide) fits this view; the normal view starts a little tighter.
   const DEMO_VIEW = { center: [100.635, 13.8], zoom: 10.9 }
@@ -139,6 +134,7 @@
     if (list.status !== 200) throw new Error("districts")
     if (list.body.notice) $("notice").textContent = list.body.notice
     state.districts = list.body.districts
+    CENTRES = Object.fromEntries(state.districts.map((d) => [d.id, d.centre]))
     const details = await Promise.all(state.districts.map((d) => api(`/districts/${d.id}`)))
     const stations = []
     const reports = []
