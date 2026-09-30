@@ -1,0 +1,8 @@
+{
+  // Read-only public demo of the finished class app (see src/worker.ts).
+  // Deploy: npx wrangler login && npx wrangler deploy
+  "name": "nam-tuam-mai-demo",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-30",
+  "workers_dev": true
+}
