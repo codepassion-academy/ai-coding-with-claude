@@ -33,6 +33,7 @@ export type RateLimitStatus = { limited: false } | { limited: true; retryAfterSe
 export const REPORT_LABEL = "รายงานจากประชาชน ยังไม่ยืนยัน ไม่ใช่ประกาศเตือนภัยทางการ"
 
 export const REPORT_TTL_MS = 6 * 60 * 60 * 1000
+export const MERGE_WINDOW_MS = 30 * 60 * 1000
 export const FUTURE_TOLERANCE_MS = 2 * 60 * 1000
 export const DEPTH_MIN_CM = 1
 export const DEPTH_MAX_CM = 300
@@ -60,17 +61,36 @@ export function severityOf(depthCm: number): Severity {
 
 /** The reports of one district as the public sees them. Computed on every response, never stored. */
 export function visibleItems(reports: readonly Report[], districtId: string, now: Date): ReportItem[] {
-  const ageMs = (r: Report) => now.getTime() - new Date(r.observedAt).getTime()
-  return reports
-    .filter((r) => r.districtId === districtId && r.hiddenAt === null && ageMs(r) < REPORT_TTL_MS)
-    .sort((a, b) => ageMs(a) - ageMs(b))
-    .map((r) => ({
-      landmark: r.landmark,
-      depthCm: r.depthCm,
-      severity: severityOf(r.depthCm),
-      observedAt: toBangkokIso(new Date(r.observedAt)),
-      minutesAgo: Math.max(0, Math.floor(ageMs(r) / 60_000)),
-      reporterCount: 1
+  const observedMs = (r: Report) => new Date(r.observedAt).getTime()
+  const receivedMs = (r: Report) => new Date(r.receivedAt).getTime()
+  const shown = reports
+    .filter((r) => r.districtId === districtId && r.hiddenAt === null && now.getTime() - observedMs(r) < REPORT_TTL_MS)
+    .sort((a, b) => observedMs(a) - observedMs(b) || receivedMs(a) - receivedMs(b))
+
+  // Oldest first: each report joins the open group of its landmark, or starts a new one after a gap.
+  const groups: { latest: Report; reporters: Set<string | null> }[] = []
+  const openGroups = new Map<string, (typeof groups)[number]>()
+  for (const r of shown) {
+    const open = openGroups.get(r.landmarkKey)
+    if (open && observedMs(r) - observedMs(open.latest) <= MERGE_WINDOW_MS) {
+      open.latest = r
+      open.reporters.add(r.reporterHash)
+    } else {
+      const started = { latest: r, reporters: new Set([r.reporterHash]) }
+      groups.push(started)
+      openGroups.set(r.landmarkKey, started)
+    }
+  }
+
+  return groups
+    .sort((a, b) => observedMs(b.latest) - observedMs(a.latest))
+    .map(({ latest, reporters }) => ({
+      landmark: latest.landmark,
+      depthCm: latest.depthCm,
+      severity: severityOf(latest.depthCm),
+      observedAt: toBangkokIso(new Date(latest.observedAt)),
+      minutesAgo: Math.max(0, Math.floor((now.getTime() - observedMs(latest)) / 60_000)),
+      reporterCount: reporters.size
     }))
 }
 

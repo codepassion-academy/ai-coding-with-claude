@@ -251,6 +251,26 @@ describe("GET /districts/:id reports", () => {
     expect(store.all()).toHaveLength(1)
   })
 
+  it("RPT-REQ-011 AC1 AC10 merges two people's reports of one spot and keeps both in the store", () => {
+    const { app, store } = setup()
+    const first = { ...validReport, depthCm: 20, observedAt: "2026-09-30T12:00:00Z" }
+    const second = { ...validReport, landmark: "ปากซอย สายไหม15", depthCm: 35, observedAt: "2026-09-30T12:25:00Z" }
+    app("POST", "/reports", first, { now: NOW, clientIp: IP })
+    app("POST", "/reports", second, { now: NOW, clientIp: "203.0.113.11" })
+    const body = app("GET", "/districts/sai-mai", undefined, { now: NOW }).body as DistrictBody
+    expect(body.reports.items).toEqual([
+      {
+        landmark: "ปากซอย สายไหม15",
+        depthCm: 35,
+        severity: "high",
+        observedAt: "2026-09-30T19:25:00+07:00",
+        minutesAgo: 5,
+        reporterCount: 2
+      }
+    ])
+    expect(store.all()).toHaveLength(2)
+  })
+
   it("RPT-REQ-009 AC5 always carries the unverified label", () => {
     const { app } = setup()
     const body = app("GET", "/districts/sai-mai", undefined, { now: NOW }).body as DistrictBody

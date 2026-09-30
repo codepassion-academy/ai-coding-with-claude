@@ -190,6 +190,76 @@ describe("visibleItems: age", () => {
   })
 })
 
+describe("visibleItems: merging", () => {
+  const HASH_A = "a".repeat(64)
+  const HASH_B = "b".repeat(64)
+  const seenAt = (time: string, overrides: Partial<Report> = {}) =>
+    report({ observedAt: `2026-09-30T${time}.000Z`, receivedAt: `2026-09-30T${time}.000Z`, ...overrides })
+
+  it("RPT-REQ-011 AC1 merges two reports of one spot into the latest, counting both reporters", () => {
+    const reports = [
+      seenAt("12:00:00", { id: "r-1", depthCm: 20, reporterHash: HASH_A }),
+      seenAt("12:25:00", { id: "r-2", depthCm: 35, reporterHash: HASH_B, landmark: "ปากซอย สายไหม15" })
+    ]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports)).toEqual([
+      {
+        landmark: "ปากซอย สายไหม15",
+        depthCm: 35,
+        severity: "high",
+        observedAt: "2026-09-30T19:25:00+07:00",
+        minutesAgo: 5,
+        reporterCount: 2
+      }
+    ])
+  })
+
+  it("RPT-REQ-011 AC2 merges across a gap of exactly 30 minutes but not one second more", () => {
+    const first = seenAt("12:00:00", { id: "r-1" })
+    expect(itemsAt("2026-09-30T12:31:00Z", [first, seenAt("12:30:00", { id: "r-2" })])).toHaveLength(1)
+    expect(itemsAt("2026-09-30T12:31:00Z", [first, seenAt("12:30:01", { id: "r-2" })])).toHaveLength(2)
+  })
+
+  it("RPT-REQ-011 AC3 slides the window along a chain of reports", () => {
+    const reports = [seenAt("12:20:00", { id: "r-3" }), seenAt("11:30:00", { id: "r-1" }), seenAt("11:55:00", { id: "r-2" })]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports)).toMatchObject([{ observedAt: "2026-09-30T19:20:00+07:00" }])
+  })
+
+  it("RPT-REQ-011 AC4 counts one reporter who reports the same spot three times once", () => {
+    const reports = [seenAt("12:00:00", { id: "r-1" }), seenAt("12:10:00", { id: "r-2" }), seenAt("12:20:00", { id: "r-3" })]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports)).toMatchObject([{ reporterCount: 1 }])
+  })
+
+  it("RPT-REQ-011 AC7 does not merge the same landmark across districts", () => {
+    const reports = [seenAt("12:00:00", { id: "r-1" }), seenAt("12:10:00", { id: "r-2", districtId: "lat-phrao", reporterHash: HASH_B })]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports)).toMatchObject([{ minutesAgo: 30, reporterCount: 1 }])
+    expect(visibleItems(reports, "lat-phrao", NOW)).toMatchObject([{ minutesAgo: 20, reporterCount: 1 }])
+  })
+
+  it("RPT-REQ-011 AC9 breaks a tie in observed time by the later received time", () => {
+    const reports = [
+      seenAt("12:00:00", { id: "r-1", depthCm: 40, receivedAt: "2026-09-30T12:10:00.000Z" }),
+      seenAt("12:00:00", { id: "r-2", depthCm: 10, receivedAt: "2026-09-30T12:05:00.000Z" })
+    ]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports)).toMatchObject([{ depthCm: 40 }])
+  })
+
+  it("RPT-REQ-011 AC10 leaves the reports it was given untouched", () => {
+    const reports = [seenAt("12:25:00", { id: "r-2" }), seenAt("12:00:00", { id: "r-1" })]
+    const before = structuredClone(reports)
+    itemsAt("2026-09-30T12:30:00Z", reports)
+    expect(reports).toEqual(before)
+  })
+
+  it("RPT-REQ-009 AC6 orders merged items by their latest report", () => {
+    const reports = [
+      seenAt("12:20:00", { id: "r-1", landmark: "จุด ก", landmarkKey: "จุดก" }),
+      seenAt("12:00:00", { id: "r-2", landmark: "จุด ข", landmarkKey: "จุดข" }),
+      seenAt("12:25:00", { id: "r-3", landmark: "จุด ข", landmarkKey: "จุดข" })
+    ]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports).map((item) => item.landmark)).toEqual(["จุด ข", "จุด ก"])
+  })
+})
+
 describe("landmarkKey", () => {
   it("RPT-REQ-011 AC5 ignores case, spaces and leading filler words", () => {
     expect(landmarkKey("หน้า Big C สายไหม")).toBe("bigcสายไหม")
