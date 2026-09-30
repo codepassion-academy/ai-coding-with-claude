@@ -28,6 +28,8 @@ export type ReportInput = { districtId: string; landmark: string; depthCm: numbe
 
 export type Validation = { ok: true; input: ReportInput } | { ok: false; fields: string[] }
 
+export type RateLimitStatus = { limited: false } | { limited: true; retryAfterSeconds: number }
+
 export const REPORT_LABEL = "รายงานจากประชาชน ยังไม่ยืนยัน ไม่ใช่ประกาศเตือนภัยทางการ"
 
 export const REPORT_TTL_MS = 6 * 60 * 60 * 1000
@@ -37,6 +39,8 @@ export const DEPTH_MAX_CM = 300
 export const LANDMARK_MIN = 3 // code points
 export const LANDMARK_MAX = 100
 export const PHONE_MASK = "[ปิดเบอร์โทร]"
+export const RATE_LIMIT_MAX = 5
+export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 
 // Arabic or Thai digits, at most one separator between digits, optional leading +.
 const PHONE_NUMBER = /\+?[0-9๐-๙](?:[ .-]?[0-9๐-๙]){8,}/g
@@ -68,6 +72,18 @@ export function visibleItems(reports: readonly Report[], districtId: string, now
         reporterCount: 1
       }
     })
+}
+
+/** Whether a reporter has used up the quota of accepted reports in the sliding window (RPT-REQ-007). */
+export function rateLimitStatus(reports: readonly Report[], reporterHash: string, now: Date): RateLimitStatus {
+  const windowStart = now.getTime() - RATE_LIMIT_WINDOW_MS
+  const received = reports
+    .filter((r) => r.reporterHash === reporterHash)
+    .map((r) => new Date(r.receivedAt).getTime())
+    .filter((receivedAt) => receivedAt > windowStart)
+  if (received.length < RATE_LIMIT_MAX) return { limited: false }
+  const oldestLeavesAt = Math.min(...received) + RATE_LIMIT_WINDOW_MS
+  return { limited: true, retryAfterSeconds: Math.ceil((oldestLeavesAt - now.getTime()) / 1000) }
 }
 
 /** Check a POST /reports body. On failure, lists the names of the bad fields, never their values. */

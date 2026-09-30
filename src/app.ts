@@ -1,15 +1,16 @@
-import { randomUUID } from "node:crypto"
+import { randomBytes, randomUUID } from "node:crypto"
 import { districts } from "./districts.ts"
 import { createMemoryReportStore, type ReportStore } from "./report-store.ts"
-import { REPORT_LABEL, severityOf, validateReportInput, visibleItems, type Report } from "./reports.ts"
+import { hashReporter } from "./reporter.ts"
+import { rateLimitStatus, REPORT_LABEL, severityOf, validateReportInput, visibleItems, type Report } from "./reports.ts"
 import { latestReading, stationsIn } from "./stations.ts"
 import { toBangkokIso } from "./time.ts"
 
-export type Response = { status: number; body: unknown }
+export type Response = { status: number; body: unknown; headers?: Record<string, string> }
 
 export type Context = { now: Date; clientIp?: string }
 
-export type AppDeps = { store: ReportStore }
+export type AppDeps = { store: ReportStore; ipHashSecret: string }
 
 export const NOTICE = "ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ"
 
@@ -37,6 +38,18 @@ export function createApp(deps: AppDeps): typeof handle {
     }
 
     if (method === "POST" && path === "/reports") {
+      // Without an address the report cannot be rate-limited, so it is not accepted.
+      if (!ctx.clientIp) return { status: 500, body: { error: "client address unavailable" } }
+      const reporterHash = hashReporter(deps.ipHashSecret, ctx.clientIp)
+      const quota = rateLimitStatus(deps.store.all(), reporterHash, ctx.now)
+      if (quota.limited) {
+        return {
+          status: 429,
+          body: { error: "rate limit exceeded", retryAfterSeconds: quota.retryAfterSeconds },
+          headers: { "Retry-After": String(quota.retryAfterSeconds) }
+        }
+      }
+
       const checked = validateReportInput(body, ctx.now)
       if (!checked.ok) return { status: 400, body: { error: "invalid report", fields: checked.fields } }
       const { districtId, landmark, depthCm, observedAt } = checked.input
@@ -48,7 +61,7 @@ export function createApp(deps: AppDeps): typeof handle {
         depthCm,
         observedAt: observedAt.toISOString(),
         receivedAt: ctx.now.toISOString(),
-        reporterHash: null,
+        reporterHash,
         hiddenAt: null
       }
       deps.store.add(report)
@@ -73,7 +86,7 @@ export function createApp(deps: AppDeps): typeof handle {
   }
 }
 
-const defaultApp = createApp({ store: createMemoryReportStore() })
+const defaultApp = createApp({ store: createMemoryReportStore(), ipHashSecret: randomBytes(32).toString("hex") })
 
 /** Route one request. Kept free of node:http so it is easy to test. */
 export function handle(method: string, path: string, body: unknown, ctx: Context = { now: new Date() }): Response {

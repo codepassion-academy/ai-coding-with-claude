@@ -16,9 +16,12 @@ const validReport = {
   observedAt: "2026-09-30T12:20:00Z"
 }
 
+// Made up for the tests; real secrets come from the environment.
+const SECRET = "test-ip-hash-secret"
+
 function setup() {
   const store = createMemoryReportStore()
-  const app = createApp({ store })
+  const app = createApp({ store, ipHashSecret: SECRET })
   return { store, app }
 }
 
@@ -87,7 +90,7 @@ describe("POST /reports", () => {
     const dir = mkdtempSync(join(tmpdir(), "flood-reports-"))
     try {
       const path = join(dir, "reports.json")
-      const app = createApp({ store: createFileReportStore(path) })
+      const app = createApp({ store: createFileReportStore(path), ipHashSecret: SECRET })
       const res = app("POST", "/reports", { ...validReport, landmark: "หน้าร้านป้าแดง โทร 081-234-5678" }, { now: NOW, clientIp: IP })
       expect(res.status).toBe(201)
       expect(res.body).toMatchObject({ report: { landmark: "หน้าร้านป้าแดง โทร [ปิดเบอร์โทร]" } })
@@ -99,10 +102,91 @@ describe("POST /reports", () => {
     }
   })
 
+  it("RPT-REQ-008 AC1 stores a hash of the address, never the address", () => {
+    const dir = mkdtempSync(join(tmpdir(), "flood-reports-"))
+    try {
+      const path = join(dir, "reports.json")
+      const store = createFileReportStore(path)
+      createApp({ store, ipHashSecret: SECRET })("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+      expect(store.all()[0]?.reporterHash).toMatch(/^[0-9a-f]{64}$/)
+      expect(readFileSync(path, "utf8")).not.toContain(IP)
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
+  })
+
+  it("RPT-REQ-001 AC5 RPT-REQ-008 AC6 keeps the reporter hash and address out of public responses", () => {
+    const { app, store } = setup()
+    const posted = app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    const shown = app("GET", "/districts/sai-mai", undefined, { now: NOW })
+    const hash = store.all()[0]?.reporterHash ?? "missing"
+    for (const text of [JSON.stringify(posted.body), JSON.stringify(shown.body)]) {
+      expect(text).not.toContain(hash)
+      expect(text).not.toContain("reporterHash")
+      expect(text).not.toContain(IP)
+    }
+  })
+
   it("RPT-REQ-012 AC4 does not store severity", () => {
     const { app, store } = setup()
     app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
     expect(store.all()[0]).not.toHaveProperty("severity")
+  })
+})
+
+describe("POST /reports rate limit", () => {
+  const at = (iso: string) => ({ now: new Date(iso), clientIp: IP })
+
+  function fillQuota(app: ReturnType<typeof setup>["app"], ctx = { now: NOW, clientIp: IP }) {
+    const observedAt = ctx.now.toISOString()
+    return Array.from({ length: 5 }, () => app("POST", "/reports", { ...validReport, observedAt }, ctx).status)
+  }
+
+  it("RPT-REQ-007 AC1 AC2 answers 429 with Retry-After on the 6th report in an hour", () => {
+    const { app, store } = setup()
+    expect(fillQuota(app)).toEqual([201, 201, 201, 201, 201])
+    const res = app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    expect(res.status).toBe(429)
+    expect(res.body).toEqual({ error: "rate limit exceeded", retryAfterSeconds: 3600 })
+    expect(res.headers).toEqual({ "Retry-After": "3600" })
+    expect(store.all()).toHaveLength(5)
+  })
+
+  it("RPT-REQ-007 AC3 counts each address separately", () => {
+    const { app } = setup()
+    fillQuota(app)
+    expect(app("POST", "/reports", validReport, { now: NOW, clientIp: "203.0.113.11" }).status).toBe(201)
+  })
+
+  it("RPT-REQ-007 AC4 frees the quota exactly 60 minutes after the reports were received", () => {
+    const { app } = setup()
+    fillQuota(app, at("2026-09-30T11:30:00Z"))
+    const early = app("POST", "/reports", validReport, at("2026-09-30T12:29:59Z"))
+    expect(early.status).toBe(429)
+    expect(early.body).toMatchObject({ retryAfterSeconds: 1 })
+    expect(app("POST", "/reports", validReport, at("2026-09-30T12:30:00Z")).status).toBe(201)
+  })
+
+  it("RPT-REQ-007 AC5 does not count rejected reports", () => {
+    const { app } = setup()
+    for (let i = 0; i < 10; i++) {
+      expect(app("POST", "/reports", { ...validReport, depthCm: 0 }, { now: NOW, clientIp: IP }).status).toBe(400)
+    }
+    expect(app("POST", "/reports", validReport, { now: NOW, clientIp: IP }).status).toBe(201)
+  })
+
+  it("RPT-REQ-007 AC6 answers 429, not 400, for an invalid report once the quota is full", () => {
+    const { app } = setup()
+    fillQuota(app)
+    expect(app("POST", "/reports", { ...validReport, depthCm: 0 }, { now: NOW, clientIp: IP }).status).toBe(429)
+  })
+
+  it("RPT-REQ-007 AC8 refuses a report when the client address is unknown", () => {
+    const { app, store } = setup()
+    const res = app("POST", "/reports", validReport, { now: NOW })
+    expect(res.status).toBe(500)
+    expect(res.body).toEqual({ error: "client address unavailable" })
+    expect(store.all()).toHaveLength(0)
   })
 })
 
