@@ -39,6 +39,7 @@ export const DEPTH_MAX_CM = 300
 export const LANDMARK_MIN = 3 // code points
 export const LANDMARK_MAX = 100
 export const PHONE_MASK = "[ปิดเบอร์โทร]"
+export const LANDMARK_PREFIXES = ["บริเวณ", "แถว", "หน้า", "ใกล้", "ตรง"]
 export const RATE_LIMIT_MAX = 5
 export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
 
@@ -105,6 +106,23 @@ export function validateReportInput(body: unknown, now: Date): Validation {
 /** Replace every run of 9 or more digits, the shape of a phone number, with PHONE_MASK. */
 export function maskPhoneNumbers(text: string): string {
   return text.replace(PHONE_NUMBER, PHONE_MASK)
+}
+
+/** The form of a (masked) landmark used to match reports of the same spot (RPT-REQ-011). */
+export function landmarkKey(landmark: string): string {
+  let key = landmark
+    .normalize("NFC")
+    .replace(/[๐-๙]/g, (digit) => String(digit.charCodeAt(0) - "๐".charCodeAt(0)))
+    .toLowerCase()
+    .replace(/\s+/g, "")
+  for (;;) {
+    // ตรงข้าม ("opposite") names a different spot, so its ตรง stays. A prefix that is the whole key stays too.
+    const prefix = LANDMARK_PREFIXES.find(
+      (p) => key.startsWith(p) && key.length > p.length && !(p === "ตรง" && key.startsWith("ตรงข้าม"))
+    )
+    if (!prefix) return key
+    key = key.slice(prefix.length)
+  }
 }
 
 function collapseWhitespace(text: string): string {

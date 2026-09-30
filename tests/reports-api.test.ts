@@ -127,6 +127,12 @@ describe("POST /reports", () => {
     }
   })
 
+  it("RPT-REQ-011 stores the matching key next to the landmark as written", () => {
+    const { app, store } = setup()
+    app("POST", "/reports", { ...validReport, landmark: "บริเวณหน้า Big C สายไหม" }, { now: NOW, clientIp: IP })
+    expect(store.all()[0]).toMatchObject({ landmark: "บริเวณหน้า Big C สายไหม", landmarkKey: "bigcสายไหม" })
+  })
+
   it("RPT-REQ-012 AC4 does not store severity", () => {
     const { app, store } = setup()
     app("POST", "/reports", validReport, { now: NOW, clientIp: IP })

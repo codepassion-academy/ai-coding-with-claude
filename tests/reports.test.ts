@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest"
 import { districts } from "../src/districts.ts"
-import { maskPhoneNumbers, PHONE_MASK, severityOf, validateReportInput, visibleItems, type Report } from "../src/reports.ts"
+import {
+  landmarkKey,
+  maskPhoneNumbers,
+  PHONE_MASK,
+  severityOf,
+  validateReportInput,
+  visibleItems,
+  type Report
+} from "../src/reports.ts"
 
 const NOW = new Date("2026-09-30T12:30:00Z")
 
@@ -179,6 +187,33 @@ describe("visibleItems: age", () => {
       report({ id: "r-3", landmark: "จุด ค", landmarkKey: "จุดค", observedAt: "2026-09-30T11:40:00.000Z" })
     ]
     expect(itemsAt("2026-09-30T12:30:00Z", reports).map((item) => item.landmark)).toEqual(["จุด ข", "จุด ค", "จุด ก"])
+  })
+})
+
+describe("landmarkKey", () => {
+  it("RPT-REQ-011 AC5 ignores case, spaces and leading filler words", () => {
+    expect(landmarkKey("หน้า Big C สายไหม")).toBe("bigcสายไหม")
+    expect(landmarkKey("บริเวณหน้า big c สายไหม")).toBe("bigcสายไหม")
+    expect(landmarkKey("BIG C สายไหม")).toBe("bigcสายไหม")
+  })
+
+  it("RPT-REQ-011 AC6 strips ตรง but keeps ตรงข้าม", () => {
+    expect(landmarkKey("ตรงข้ามเซเว่น")).toBe("ตรงข้ามเซเว่น")
+    expect(landmarkKey("ตรงเซเว่น")).toBe(landmarkKey("เซเว่น"))
+    expect(landmarkKey("ตรงข้ามเซเว่น")).not.toBe(landmarkKey("เซเว่น"))
+  })
+
+  it("RPT-REQ-011 AC8 never strips a landmark down to nothing", () => {
+    expect(landmarkKey("บริเวณ")).toBe("บริเวณ")
+    expect(landmarkKey("บริเวณหน้า")).toBe("หน้า")
+  })
+
+  it("RPT-REQ-011 reads Thai digits as Arabic digits", () => {
+    expect(landmarkKey("ปากซอยสายไหม ๑๕")).toBe(landmarkKey("ปากซอย สายไหม15"))
+  })
+
+  it.each(["แถว", "ใกล้"])("RPT-REQ-011 strips the prefix %s", (prefix) => {
+    expect(landmarkKey(`${prefix}ตลาดสายไหม`)).toBe("ตลาดสายไหม")
   })
 })
 

@@ -2,7 +2,15 @@ import { randomBytes, randomUUID } from "node:crypto"
 import { districts } from "./districts.ts"
 import { createMemoryReportStore, type ReportStore } from "./report-store.ts"
 import { hashReporter } from "./reporter.ts"
-import { rateLimitStatus, REPORT_LABEL, severityOf, validateReportInput, visibleItems, type Report } from "./reports.ts"
+import {
+  landmarkKey,
+  rateLimitStatus,
+  REPORT_LABEL,
+  severityOf,
+  validateReportInput,
+  visibleItems,
+  type Report
+} from "./reports.ts"
 import { latestReading, stationsIn } from "./stations.ts"
 import { toBangkokIso } from "./time.ts"
 
@@ -57,7 +65,7 @@ export function createApp(deps: AppDeps): typeof handle {
         id: randomUUID(),
         districtId,
         landmark,
-        landmarkKey: landmark,
+        landmarkKey: landmarkKey(landmark),
         depthCm,
         observedAt: observedAt.toISOString(),
         receivedAt: ctx.now.toISOString(),
