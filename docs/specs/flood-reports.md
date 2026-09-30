@@ -24,7 +24,7 @@
 
 ## 2. Requirements
 
-ค่าคงที่ทั้งหมดอยู่ใน `src/reports.ts` ตั้งชื่อตามนี้เพื่อให้ test อ้างได้
+ค่าคงที่ทั้งหมด import ได้จาก `src/reports.ts` ตั้งชื่อตามนี้เพื่อให้ test อ้างได้ (`RATE_LIMIT_MAX` / `RATE_LIMIT_WINDOW_MS` นิยามใน `src/rate-limit.ts` แล้ว re-export จาก `src/reports.ts` เพื่อกัน import วนระหว่างสองไฟล์)
 
 | ค่าคงที่ | ค่า |
 | -------- | --- |
@@ -264,6 +264,7 @@ export function ageLabelTh(ageMinutes: number): string
 export type RateLimiter = {
   check(key: string, now: Date): { allowed: true } | { allowed: false; retryAfterSec: number }
   record(key: string, now: Date): void
+  prune(now: Date): void   // ตัด entry ที่พ้นหน้าต่างและ key ที่ว่างทิ้ง เรียกจาก purge ของ store (REQ-012 AC3)
   size(): number   // จำนวน key ที่มีรายการในหน้าต่าง
 }
 export function createRateLimiter(max = RATE_LIMIT_MAX, windowMs = RATE_LIMIT_WINDOW_MS): RateLimiter
@@ -355,7 +356,7 @@ Sliding-window log ต่อ key เก็บแค่ timestamp (ตัวเ�
 ## 5. Out of scope (รอบนี้ไม่ทำ)
 
 - ระบบล็อกอิน บัญชีผู้ใช้ หรือการอ้างตัวตนผู้รายงาน (จึง **ไม่มีทางแก้/ลบรายงานของตัวเอง** รายงานผิดรอหมดอายุ)
-- พิกัด GPS แผนที่ รูปภาพ
+- พิกัด GPS และรูปภาพ (หน้าแผนที่แยกเป็น spec `flood-map` ใน `.scratch/flood-map/spec.md` หมุดวางตามกึ่งกลางเขต ยังไม่เก็บพิกัดของผู้รายงาน)
 - ตัวเลข cm อิสระจาก client และการยืนยันตาราง 10/50/100 กับผู้เชี่ยวชาญ (Q1 ยังเปิดอยู่ในเชิงข้อมูล)
 - รายการจุดสังเกตที่กำหนดไว้ต่อเขต และการรวมด้วยความคล้ายของข้อความ (fuzzy)
 - การตรวจสอบ/ยืนยันรายงาน, moderation, หน้าจอเจ้าหน้าที่เขตหรือกู้ภัย (Q10)
