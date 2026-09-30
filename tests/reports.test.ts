@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { districts } from "../src/districts.ts"
-import { severityOf, validateReportInput } from "../src/reports.ts"
+import { maskPhoneNumbers, PHONE_MASK, severityOf, validateReportInput } from "../src/reports.ts"
 
 const NOW = new Date("2026-09-30T12:30:00Z")
 
@@ -76,6 +76,65 @@ describe("validateReportInput: observedAt", () => {
       expect(badFields({ observedAt })).toEqual(["observedAt"])
     }
   )
+})
+
+function storedLandmark(landmark: unknown): string | undefined {
+  const result = check({ landmark })
+  return result.ok ? result.input.landmark : undefined
+}
+
+describe("validateReportInput: landmark", () => {
+  it.each(["abc", "ก".repeat(100)])("RPT-REQ-005 AC1 accepts 3 and 100 characters", (landmark) => {
+    expect(storedLandmark(landmark)).toBe(landmark)
+  })
+
+  it.each(["ก".repeat(101), "ab", "", "   "])("RPT-REQ-005 AC2 rejects %j", (landmark) => {
+    expect(badFields({ landmark })).toEqual(["landmark"])
+  })
+
+  it("RPT-REQ-005 AC3 collapses whitespace and trims", () => {
+    expect(storedLandmark("  ปากซอย \n สายไหม 15  ")).toBe("ปากซอย สายไหม 15")
+  })
+
+  it("RPT-REQ-005 normalizes to NFC", () => {
+    expect(storedLandmark("café สายไหม")).toBe("café สายไหม")
+  })
+
+  it.each(["ปาก\u0000ซอย", "ปาก\u001bซอย"])("RPT-REQ-005 AC4 rejects control characters", (landmark) => {
+    expect(badFields({ landmark })).toEqual(["landmark"])
+  })
+
+  it.each([15, { text: "ปากซอย" }, undefined])("RPT-REQ-005 AC5 rejects a non-string: %j", (landmark) => {
+    expect(badFields({ landmark })).toEqual(["landmark"])
+  })
+
+  it("RPT-REQ-006 AC1 masks a phone number before the landmark leaves validation", () => {
+    expect(storedLandmark("หน้าร้านป้าแดง โทร 081-234-5678")).toBe("หน้าร้านป้าแดง โทร [ปิดเบอร์โทร]")
+  })
+
+  it("RPT-REQ-006 AC4 rejects a landmark that is only a phone number", () => {
+    expect(badFields({ landmark: "0812345678" })).toEqual(["landmark"])
+    expect(badFields({ landmark: "ab 0812345678" })).toEqual(["landmark"])
+  })
+
+  it("RPT-REQ-006 AC6 checks the 100-character limit before masking", () => {
+    const landmark = `${"ก".repeat(89)} 0812345678`
+    expect([...landmark]).toHaveLength(100)
+    expect(storedLandmark(landmark)).toBe(`${"ก".repeat(89)} ${PHONE_MASK}`)
+  })
+})
+
+describe("maskPhoneNumbers", () => {
+  it.each(["0812345678", "081 234 5678", "02-123-4567", "+66812345678", "๐๘๑๒๓๔๕๖๗๘", "081.234.5678"])(
+    "RPT-REQ-006 AC2 masks %s",
+    (phone) => {
+      expect(maskPhoneNumbers(`โทร ${phone} ได้เลย`)).toBe(`โทร ${PHONE_MASK} ได้เลย`)
+    }
+  )
+
+  it.each(["ซอยลาดพร้าว 101 หน้าเซเว่น", "สายไหม 15 แยก 3", "หมู่บ้าน 12345678"])("RPT-REQ-006 AC3 leaves %s alone", (text) => {
+    expect(maskPhoneNumbers(text)).toBe(text)
+  })
 })
 
 describe("validateReportInput: several fields", () => {

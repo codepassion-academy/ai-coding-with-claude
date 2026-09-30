@@ -1,6 +1,9 @@
+import { mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import { describe, expect, it } from "vitest"
 import { createApp, handle, NOTICE } from "../src/app.ts"
-import { createMemoryReportStore } from "../src/report-store.ts"
+import { createFileReportStore, createMemoryReportStore } from "../src/report-store.ts"
 import { REPORT_LABEL } from "../src/reports.ts"
 
 const NOW = new Date("2026-09-30T12:30:00Z")
@@ -78,6 +81,22 @@ describe("POST /reports", () => {
     expect(res.status).toBe(400)
     expect(res.body).toEqual({ error: "invalid report", fields: ["districtId", "depthCm"] })
     expect(store.all()).toHaveLength(0)
+  })
+
+  it("RPT-REQ-006 AC1 AC5 stores and returns the masked landmark, and the file never holds the number", () => {
+    const dir = mkdtempSync(join(tmpdir(), "flood-reports-"))
+    try {
+      const path = join(dir, "reports.json")
+      const app = createApp({ store: createFileReportStore(path) })
+      const res = app("POST", "/reports", { ...validReport, landmark: "หน้าร้านป้าแดง โทร 081-234-5678" }, { now: NOW, clientIp: IP })
+      expect(res.status).toBe(201)
+      expect(res.body).toMatchObject({ report: { landmark: "หน้าร้านป้าแดง โทร [ปิดเบอร์โทร]" } })
+      const file = readFileSync(path, "utf8")
+      expect(file).toContain("หน้าร้านป้าแดง โทร [ปิดเบอร์โทร]")
+      expect(file).not.toContain("5678")
+    } finally {
+      rmSync(dir, { recursive: true, force: true })
+    }
   })
 
   it("RPT-REQ-012 AC4 does not store severity", () => {

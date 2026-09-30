@@ -34,6 +34,12 @@ export const REPORT_TTL_MS = 6 * 60 * 60 * 1000
 export const FUTURE_TOLERANCE_MS = 2 * 60 * 1000
 export const DEPTH_MIN_CM = 1
 export const DEPTH_MAX_CM = 300
+export const LANDMARK_MIN = 3 // code points
+export const LANDMARK_MAX = 100
+export const PHONE_MASK = "[ปิดเบอร์โทร]"
+
+// Arabic or Thai digits, at most one separator between digits, optional leading +.
+const PHONE_NUMBER = /\+?[0-9๐-๙](?:[ .-]?[0-9๐-๙]){8,}/g
 
 /** Provisional thresholds (RPT-REQ-012): each level covers depths up to and including maxCm. */
 export const SEVERITY_THRESHOLDS: readonly { severity: Severity; maxCm: number }[] = [
@@ -69,7 +75,7 @@ export function validateReportInput(body: unknown, now: Date): Validation {
   if (typeof body !== "object" || body === null || Array.isArray(body)) return { ok: false, fields: ["body"] }
   const raw = body as Record<string, unknown>
   const districtId = typeof raw.districtId === "string" && districts.has(raw.districtId) ? raw.districtId : undefined
-  const landmark = typeof raw.landmark === "string" ? raw.landmark : undefined
+  const landmark = cleanLandmark(raw.landmark)
   const depthCm = isDepthCm(raw.depthCm) ? raw.depthCm : undefined
   const observedAt = checkObservedAt(raw.observedAt, now)
 
@@ -79,6 +85,26 @@ export function validateReportInput(body: unknown, now: Date): Validation {
     return { ok: false, fields }
   }
   return { ok: true, input: { districtId, landmark, depthCm, observedAt } }
+}
+
+/** Replace every run of 9 or more digits, the shape of a phone number, with PHONE_MASK. */
+export function maskPhoneNumbers(text: string): string {
+  return text.replace(PHONE_NUMBER, PHONE_MASK)
+}
+
+function collapseWhitespace(text: string): string {
+  return text.replace(/\s+/g, " ").trim()
+}
+
+/** The landmark as it may be stored: tidied and with phone numbers masked. The raw text goes no further. */
+function cleanLandmark(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+  const text = collapseWhitespace(value.normalize("NFC"))
+  const length = [...text].length
+  if (length < LANDMARK_MIN || length > LANDMARK_MAX || /\p{Cc}/u.test(text)) return undefined
+  const masked = maskPhoneNumbers(text)
+  const unmasked = collapseWhitespace(masked.replaceAll(PHONE_MASK, ""))
+  return [...unmasked].length < LANDMARK_MIN ? undefined : masked
 }
 
 /** An integer JSON number in range. No rounding and no conversion from strings. */
