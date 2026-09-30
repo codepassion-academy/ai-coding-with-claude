@@ -65,6 +65,62 @@ describe("POST /reports", () => {
   })
 })
 
+describe("GET /districts/:id reports", () => {
+  type DistrictBody = { stations: unknown[]; reports: { label: string; items: Record<string, unknown>[] } }
+
+  it("RPT-REQ-009 AC1 adds an empty reports key and leaves stations as they were", () => {
+    const { app } = setup()
+    const res = app("GET", "/districts/lat-phrao", undefined, { now: NOW })
+    expect(res.body).toEqual({
+      notice: NOTICE,
+      district: { id: "lat-phrao", nameTh: "ลาดพร้าว", nameEn: "Lat Phrao" },
+      stations: [
+        { id: "st-ladprao-01", nameTh: "คลองลาดพร้าว (ตัวอย่าง)", latest: { at: "2026-09-30T19:00:00+07:00", levelCm: 104 } }
+      ],
+      reports: { label: REPORT_LABEL, items: [] }
+    })
+  })
+
+  it("RPT-REQ-009 AC2 AC7 shows a report in a district with no stations, with only the public keys", () => {
+    const { app } = setup()
+    app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    const body = app("GET", "/districts/sai-mai", undefined, { now: NOW }).body as DistrictBody
+    expect(body.stations).toEqual([])
+    expect(body.reports.items).toEqual([
+      {
+        landmark: "ปากซอยสายไหม 15",
+        depthCm: 25,
+        severity: "medium",
+        observedAt: "2026-09-30T19:20:00+07:00",
+        minutesAgo: 10,
+        reporterCount: 1
+      }
+    ])
+  })
+
+  it("RPT-REQ-009 AC3 keeps a report out of other districts", () => {
+    const { app } = setup()
+    app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    const body = app("GET", "/districts/lat-phrao", undefined, { now: NOW }).body as DistrictBody
+    expect(body.reports.items).toEqual([])
+  })
+
+  it("RPT-REQ-009 AC4 never lets a report change a station reading", () => {
+    const { app } = setup()
+    app("POST", "/reports", { ...validReport, districtId: "lat-phrao", depthCm: 250 }, { now: NOW, clientIp: IP })
+    const res = app("GET", "/districts/lat-phrao", undefined, { now: NOW })
+    expect(res.body).toMatchObject({ stations: [{ latest: { levelCm: 104 } }] })
+  })
+
+  it("RPT-REQ-009 AC5 always carries the unverified label", () => {
+    const { app } = setup()
+    const body = app("GET", "/districts/sai-mai", undefined, { now: NOW }).body as DistrictBody
+    expect(body.reports.items).toEqual([])
+    expect(body.reports.label).toContain("รายงานจากประชาชน")
+    expect(body.reports.label).toContain("ไม่ใช่ประกาศเตือนภัยทางการ")
+  })
+})
+
 describe("existing routes", () => {
   it("RPT-REQ-018 AC2 handle still works with a context that only has now", () => {
     const res = handle("GET", "/districts", undefined, { now: NOW })

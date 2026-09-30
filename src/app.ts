@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 import { districts } from "./districts.ts"
 import { createMemoryReportStore, type ReportStore } from "./report-store.ts"
-import { REPORT_LABEL, severityOf, validateReportInput, type Report } from "./reports.ts"
+import { REPORT_LABEL, severityOf, validateReportInput, visibleItems, type Report } from "./reports.ts"
 import { latestReading, stationsIn } from "./stations.ts"
 import { toBangkokIso } from "./time.ts"
 
@@ -32,7 +32,8 @@ export function createApp(deps: AppDeps): typeof handle {
           latest: latest ? { at: toBangkokIso(latest.at), levelCm: latest.levelCm } : null
         }
       })
-      return { status: 200, body: { notice: NOTICE, district, stations } }
+      const reports = { label: REPORT_LABEL, items: visibleItems(deps.store.all(), district.id, ctx.now) }
+      return { status: 200, body: { notice: NOTICE, district, stations, reports } }
     }
 
     if (method === "POST" && path === "/reports") {

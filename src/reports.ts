@@ -1,3 +1,5 @@
+import { toBangkokIso } from "./time.ts"
+
 export type Report = {
   id: string
   districtId: string
@@ -11,6 +13,15 @@ export type Report = {
 }
 
 export type Severity = "low" | "medium" | "high"
+
+export type ReportItem = {
+  landmark: string
+  depthCm: number
+  severity: Severity
+  observedAt: string // Bangkok time
+  minutesAgo: number
+  reporterCount: number
+}
 
 export type ReportInput = { districtId: string; landmark: string; depthCm: number; observedAt: Date }
 
@@ -28,6 +39,23 @@ export const SEVERITY_THRESHOLDS: readonly { severity: Severity; maxCm: number }
 /** Severity is derived from depth on every response and never stored, so thresholds can change. */
 export function severityOf(depthCm: number): Severity {
   return SEVERITY_THRESHOLDS.find((t) => depthCm <= t.maxCm)?.severity ?? "high"
+}
+
+/** The reports of one district as the public sees them. Computed on every response, never stored. */
+export function visibleItems(reports: readonly Report[], districtId: string, now: Date): ReportItem[] {
+  return reports
+    .filter((r) => r.districtId === districtId && r.hiddenAt === null)
+    .map((r) => {
+      const observedAt = new Date(r.observedAt)
+      return {
+        landmark: r.landmark,
+        depthCm: r.depthCm,
+        severity: severityOf(r.depthCm),
+        observedAt: toBangkokIso(observedAt),
+        minutesAgo: Math.floor((now.getTime() - observedAt.getTime()) / 60_000),
+        reporterCount: 1
+      }
+    })
 }
 
 /** Check a POST /reports body. On failure, lists the names of the bad fields, never their values. */
