@@ -3,47 +3,93 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
   <title>น้ำท่วมไหม</title>
+  <link rel="preload" href="/fonts/noto-sans-thai-thai.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.css" integrity="sha384-uTttxo/aOKbdE5RlD/SPzSDoDmNvGlUYPjONi2MN/b7c9HPSvW07OIuyP7uL6jxK" crossorigin="anonymous">
   <link rel="stylesheet" href="/app.css">
   <script src="https://unpkg.com/maplibre-gl@5.24.0/dist/maplibre-gl.js" integrity="sha384-5+cfbwT0iiub6VsQAdn6yz16nr6sDiQoHx6tm4O8OVYXHYOxcffFmCJBL0dgdvGp" crossorigin="anonymous" defer></script>
   <script src="https://unpkg.com/pmtiles@4.5.0/dist/pmtiles.js" integrity="sha384-pbKNZbDshUsLnZMIVsn/t+j3xEY9PGfuX5Z22l5rcy/obXz3EwaMx1F5d9sRsJMn" crossorigin="anonymous" defer></script>
   <script src="https://unpkg.com/@protomaps/basemaps@5.7.2/dist/basemaps.js" integrity="sha384-fzuU7k7ZWwfZAe1+3h7plrSA6dNazJaM2NsKVwcrReJLK0gwVwyOSyPwROl9m1M0" crossorigin="anonymous" defer></script>
+  <script src="/demo.js" defer></script>
   <script src="/app.js" defer></script>
 </head>
 <body>
-  <header class="bar">
-    <h1>น้ำท่วม<span>ไหม</span></h1>
-    <p class="notice" id="notice">ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ</p>
-    <button class="primary" id="report-open" type="button">แจ้งจุดน้ำท่วม</button>
-  </header>
+  <div class="map" id="map" role="region" aria-label="แผนที่จุดน้ำท่วม"></div>
 
-  <main class="layout">
-    <section class="map-wrap" aria-label="แผนที่จุดน้ำท่วม">
-      <div class="map" id="map"></div>
-      <p class="map-status" id="map-status" hidden></p>
+  <aside class="panel" aria-labelledby="brand-name">
+    <span class="handle" aria-hidden="true"></span>
+
+    <header class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 3c5.5 7 9 11.8 9 16a9 9 0 0 1-18 0c0-4.2 3.5-9 9-16Z" fill="currentColor" opacity="0.18"/>
+        <path d="M16 3c5.5 7 9 11.8 9 16a9 9 0 0 1-18 0c0-4.2 3.5-9 9-16Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M8.2 20.5c2.6 1.6 5.2-1.6 7.8 0s5.2 1.6 7.8 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <h1 id="brand-name">น้ำท่วมไหม</h1>
+        <p>แผนที่จุดน้ำท่วมจากคนในพื้นที่ · กรุงเทพฯ</p>
+      </div>
+      <button class="cta" id="report-open" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span>แจ้งจุดน้ำท่วม</span>
+      </button>
+    </header>
+
+    <p class="notice" id="notice">ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ</p>
+
+    <section class="overview" aria-labelledby="overview-h">
+      <div class="section-head">
+        <h2 id="overview-h">สถานการณ์ตอนนี้</h2>
+        <span class="updated" id="updated">กำลังโหลด…</span>
+      </div>
+      <dl class="summary" id="summary">
+        <div class="tile ankle"><dt>ระดับข้อเท้า</dt><dd><b>0</b><span>จุด</span></dd></div>
+        <div class="tile knee"><dt>ระดับเข่า</dt><dd><b>0</b><span>จุด</span></dd></div>
+        <div class="tile waist"><dt>ระดับเอว</dt><dd><b>0</b><span>จุด</span></dd></div>
+      </dl>
     </section>
 
-    <aside class="panel" aria-labelledby="list-h">
-      <div class="panel-head">
-        <h2 id="list-h">จุดที่มีคนรายงาน</h2>
-        <span class="count" id="count"></span>
+    <section class="reports" aria-labelledby="list-h">
+      <div class="section-head">
+        <h2 id="list-h">จุดที่มีคนรายงาน <span class="count" id="count"></span></h2>
+        <button class="toggle" id="demo-toggle" type="button" aria-pressed="false">
+          <span class="switch" aria-hidden="true"></span>ข้อมูลจำลอง
+        </button>
       </div>
       <div class="filters" id="filters" role="group" aria-label="กรองตามเขต"></div>
       <ol class="incidents" id="incidents" aria-live="polite"></ol>
-      <p class="fineprint">
-        รายงานจากคนในพื้นที่ยังไม่ได้ยืนยันเสมอ แสดงเฉพาะ 6 ชั่วโมงล่าสุด
-        ตำแหน่งหมุดเป็นค่าประมาณจากเขต ระบบไม่เก็บพิกัดของผู้รายงาน
-        อัปเดตทุก 1 นาที
-      </p>
-    </aside>
-  </main>
+    </section>
+
+    <p class="fineprint">
+      รายงานจากคนในพื้นที่ยังไม่ได้ยืนยันเสมอ แสดงเฉพาะ 6 ชั่วโมงล่าสุด
+      ตำแหน่งหมุดเป็นค่าประมาณจากเขต ระบบไม่เก็บพิกัดของผู้รายงาน
+    </p>
+  </aside>
+
+  <div class="legend" id="legend" hidden>
+    <span class="legend-title">ความลึกของน้ำ <em>ข้อมูลจำลอง</em></span>
+    <ol class="legend-steps" aria-label="ระดับน้ำ 10 ถึง 100 เซนติเมตร">
+      <li class="s1"><span>10</span></li>
+      <li class="s2"><span>30</span></li>
+      <li class="s3"><span>50</span></li>
+      <li class="s4"><span>80</span></li>
+      <li class="s5"><span>100+ cm</span></li>
+    </ol>
+  </div>
+
+  <p class="map-status" id="map-status" hidden></p>
 
   <dialog class="sheet" id="report-dialog" aria-labelledby="form-h">
     <form id="report-form" novalidate>
       <div class="sheet-head">
-        <h2 id="form-h">แจ้งจุดน้ำท่วม</h2>
-        <button class="ghost" id="report-close" type="button">ปิด</button>
+        <div>
+          <h2 id="form-h">แจ้งจุดน้ำท่วม</h2>
+          <p class="hint">ข้อมูลของคุณช่วยให้คนในพื้นที่เลี่ยงเส้นทางได้</p>
+        </div>
+        <button class="icon-button" id="report-close" type="button" aria-label="ปิด">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </button>
       </div>
 
       <div class="field">
@@ -59,10 +105,13 @@
 
       <fieldset class="field">
         <legend>น้ำลึกประมาณ</legend>
-        <div class="seg">
-          <input type="radio" name="depth" id="f-ankle" value="ankle"><label for="f-ankle">ข้อเท้า<small>~10 cm</small></label>
-          <input type="radio" name="depth" id="f-knee" value="knee" checked><label for="f-knee">เข่า<small>~50 cm</small></label>
-          <input type="radio" name="depth" id="f-waist" value="waist"><label for="f-waist">เอว<small>~100 cm</small></label>
+        <div class="depth-picker">
+          <input type="radio" name="depth" id="f-ankle" value="ankle">
+          <label for="f-ankle" class="ankle"><span class="staff" aria-hidden="true"><i></i></span>ข้อเท้า<small>~10 cm</small></label>
+          <input type="radio" name="depth" id="f-knee" value="knee" checked>
+          <label for="f-knee" class="knee"><span class="staff" aria-hidden="true"><i></i></span>เข่า<small>~50 cm</small></label>
+          <input type="radio" name="depth" id="f-waist" value="waist">
+          <label for="f-waist" class="waist"><span class="staff" aria-hidden="true"><i></i></span>เอว<small>~100 cm</small></label>
         </div>
       </fieldset>
 
@@ -80,7 +129,7 @@
       </div>
 
       <p class="form-error" id="f-error" role="alert" hidden></p>
-      <button class="primary wide" id="f-submit" type="submit">ส่งรายงาน</button>
+      <button class="cta wide" id="f-submit" type="submit">ส่งรายงาน</button>
     </form>
   </dialog>
 

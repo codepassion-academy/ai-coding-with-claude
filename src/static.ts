@@ -10,6 +10,10 @@ import { fileURLToPath } from "node:url"
 const FILES: Record<string, { file: string; type: string }> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8" },
+  "/demo.js": { file: "demo.js", type: "text/javascript; charset=utf-8" },
+  // Noto Sans Thai (SIL OFL 1.1, public/fonts/OFL.txt), hosted here so no font request leaves the site.
+  "/fonts/noto-sans-thai-thai.woff2": { file: "fonts/noto-sans-thai-thai.woff2", type: "font/woff2" },
+  "/fonts/noto-sans-thai-latin.woff2": { file: "fonts/noto-sans-thai-latin.woff2", type: "font/woff2" },
   "/app.css": { file: "app.css", type: "text/css; charset=utf-8" },
   // Protomaps extract of Bangkok (ADR 0001). Not in git; see README for how to make it.
   "/tiles/bangkok.pmtiles": { file: "tiles/bangkok.pmtiles", type: "application/octet-stream" }
@@ -21,6 +25,7 @@ const CSP = [
   "script-src 'self' https://unpkg.com",
   "style-src 'self' https://unpkg.com",
   "img-src 'self' data: blob:",
+  "font-src 'self'",
   "connect-src 'self' https://protomaps.github.io",
   "worker-src blob:",
   "child-src blob:",
@@ -71,6 +76,8 @@ export function serveStatic(req: IncomingMessage, res: ServerResponse, path: str
     headers["referrer-policy"] = "no-referrer"
     headers["cache-control"] = "no-cache"
   }
+
+  if (path.startsWith("/fonts/")) headers["cache-control"] = "public, max-age=31536000, immutable"
 
   if (path.startsWith("/tiles/")) {
     headers["accept-ranges"] = "bytes"

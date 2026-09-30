@@ -72,7 +72,8 @@ pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/bangko
 | `src/read-body.ts` | อ่าน body ไม่เกิน 2048 byte |
 | `src/static.ts` | เสิร์ฟหน้าเว็บแผนที่และไฟล์ tiles |
 | `src/server.ts` | HTTP server |
-| `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`) |
+| `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`), ข้อมูลจำลอง `demo.js` (เปิดด้วย `/?demo`) |
+| `public/fonts/` | Noto Sans Thai แบบ variable (SIL OFL 1.1, ดู `OFL.txt`) host เองไม่ดึงจาก Google Fonts |
 | `tests/` | test ด้วย vitest |
 
 กติกาที่ใช้ทั้ง repo

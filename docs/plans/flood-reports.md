@@ -73,8 +73,10 @@
 - [x] ไฟล์: ใหม่ `src/static.ts` (whitelist `/`, `/app.js`, `/app.css`, `/tiles/bangkok.pmtiles` + Range, CSP), แก้ `src/server.ts` (`createAppServer(handler, { publicDir })`), ใหม่ `public/index.html`, `public/app.js`, `public/app.css`, ใหม่ `tests/web.test.ts`
 - [x] MapLibre 5.24.0 / pmtiles 4.5.0 / @protomaps/basemaps 5.7.2 จาก unpkg ปักเวอร์ชัน + SRI ไม่แก้ `package.json`
 - [x] หมุดวางตามเขตโดยประมาณ API ยังไม่เก็บพิกัด (spec §5, RPT-REQ-013)
+- [x] หน้าตาใหม่: แผงกระจกลอยบนแผนที่ (มือถือเป็น bottom sheet), สรุปจำนวนจุดตามระดับน้ำ, ไม้วัดระดับน้ำในแต่ละรายการ, ฟอนต์ Noto Sans Thai host เอง (`font-src 'self'`), สีน้ำจาก token `--flood-1..5` ตามธีม
+- [x] โหมดข้อมูลจำลอง (`/?demo` หรือปุ่ม "ข้อมูลจำลอง"): `public/demo.js` มีรายงานจำลอง 44 จุดใน 12 เขต และพื้นที่น้ำท่วม 15 โซนตามจุดที่มักท่วมในกรุงเทพฯ (รามคำแหง, แฟลตคลองจั่น, ห้าแยกลาดพร้าว, แยกเกษตร, สายไหม, อโศก, ลาดกระบัง ฯลฯ) พร้อมพื้นที่น้ำท่วมไล่สีฟ้าอ่อนถึงเข้มตามความลึก ติดป้าย "ข้อมูลจำลอง" ทุกจุด ไม่ส่งเข้า API ปิดเป็นค่าเริ่มต้น
 - [ ] ยังไม่ได้ลองเปิดใน browser จริง (headless Brave ไม่ render ในเครื่องนี้) ต้องเปิด `localhost:3000` ดูด้วยตา
-- [ ] ไฟล์ `public/tiles/bangkok.pmtiles` ต้องสร้างเองตาม README ยังไม่มีในเครื่อง
+- [x] ไฟล์ `public/tiles/bangkok.pmtiles` สร้างแล้วในเครื่องนี้ (build 20260930, 47 MB, gitignored) เครื่องอื่นต้องสร้างเองตาม README
 - [ ] glyphs/sprite ยังดึงจาก `protomaps.github.io` และ MapLibre/pmtiles/basemaps JS+CSS จาก unpkg ทำให้ IP ของผู้ชมไปถึงบุคคลที่สาม ต้อง self-host ตาม ADR 0001
 
 ## Later (ไม่ทำรอบนี้)

@@ -15,6 +15,8 @@
     "khlong-toei": [100.565, 13.71], "bang-na": [100.615, 13.668], "lat-krabang": [100.755, 13.74]
   }
   const BOUNDS = [[100.3, 13.5], [100.95, 14.05]]
+  // The whole demo scene (city-wide) fits this view; the normal view starts a little tighter.
+  const DEMO_VIEW = { center: [100.635, 13.8], zoom: 10.9 }
 
   const ERRORS = {
     invalid_body: "ส่งข้อมูลไม่ครบ ลองใหม่อีกครั้ง",
@@ -31,11 +33,49 @@
     internal: "ระบบขัดข้อง ลองใหม่อีกครั้ง"
   }
 
-  const state = { districts: [], stations: [], reports: [], filter: "all", selected: null }
+  // Simulated reports and flood areas from demo.js, only when the page is opened with ?demo or toggled on.
+  const DEMO = window.NAMTUAM_DEMO
+  // Depth bands in cm for the water layer. Colours come from the --flood-1..5 tokens in app.css,
+  // so the map, the legend and the pins share one palette per theme.
+  const FLOOD_CM = [10, 30, 50, 80, 100]
+
+  const state = {
+    districts: [],
+    stations: [],
+    realReports: [],
+    reports: [],
+    filter: "all",
+    selected: null,
+    demo: Boolean(DEMO) && new URLSearchParams(location.search).has("demo")
+  }
   const pins = new Map()
   let map = null
+  let hasTiles = false
+  let firstRender = true
+  // True between a style's "style.load" and the next setStyle; custom layers can only be added then.
+  let styleReady = false
   let popup = null
   let onPopupClose = null
+
+  const SVG_NS = "http://www.w3.org/2000/svg"
+  /** Small inline icon from path data we write ourselves (never from user input). */
+  function icon(d, className) {
+    const svg = document.createElementNS(SVG_NS, "svg")
+    svg.setAttribute("viewBox", "0 0 20 20")
+    svg.setAttribute("aria-hidden", "true")
+    if (className) svg.setAttribute("class", className)
+    const path = document.createElementNS(SVG_NS, "path")
+    path.setAttribute("d", d)
+    path.setAttribute("fill", "none")
+    path.setAttribute("stroke", "currentColor")
+    path.setAttribute("stroke-width", "1.7")
+    path.setAttribute("stroke-linecap", "round")
+    path.setAttribute("stroke-linejoin", "round")
+    svg.append(path)
+    return svg
+  }
+  const ICON_PEOPLE = "M7 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Zm-4.5 7c0-2.5 2-4.5 4.5-4.5s4.5 2 4.5 4.5M13.5 9a2 2 0 1 0 0-4M14 11.6c1.9.4 3.5 2.1 3.5 4.4"
+  const ICON_DROP = "M10 2.5c3.2 4 5.2 6.8 5.2 9.2a5.2 5.2 0 0 1-10.4 0c0-2.4 2-5.2 5.2-9.2Z"
 
   const $ = (id) => document.getElementById(id)
   const el = (tag, className, text) => {
@@ -54,7 +94,34 @@
     const radius = 0.004 + ((h >>> 9) % 80) / 10000
     return [lon + Math.cos(angle) * radius, lat + Math.sin(angle) * radius]
   }
-  const positionOf = (item) => (item.kind === "station" ? CENTRES[item.districtId] : place(item.districtId, item.landmark.toLowerCase()))
+  const positionOf = (item) =>
+    item.lngLat ?? (item.kind === "station" ? CENTRES[item.districtId] : place(item.districtId, item.landmark.toLowerCase()))
+
+  // Same wording as the API's ageLabel (RPT-REQ-011), for the simulated reports.
+  const ageLabelTh = (m) => (m < 1 ? "เห็นเมื่อสักครู่" : m < 60 ? `เห็นเมื่อ ${m} นาทีก่อน` : `เห็นเมื่อ ${Math.floor(m / 60)} ชั่วโมงก่อน`)
+  const bangkokIso = (ms) => new Date(ms + 7 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+07:00")
+
+  function demoReports() {
+    if (!state.demo) return []
+    const nameOf = (id) => state.districts.find((d) => d.id === id)?.nameTh ?? id
+    return DEMO.reports.map((r, i) => ({
+      ...r,
+      id: `demo-${i}`,
+      key: `demo:${i}`,
+      kind: "report",
+      demo: true,
+      districtName: nameOf(r.districtId),
+      ageLabel: ageLabelTh(r.ageMinutes),
+      seenAt: bangkokIso(Date.now() - r.ageMinutes * 60 * 1000)
+    }))
+  }
+
+  /** Real reports plus demo ones, newest first. seenAt always carries +07:00, so it sorts as text. */
+  function mergeReports() {
+    state.reports = [...state.realReports, ...demoReports()].sort((a, b) =>
+      a.seenAt < b.seenAt ? 1 : a.seenAt > b.seenAt ? -1 : a.id < b.id ? -1 : 1
+    )
+  }
 
   async function api(path, init) {
     const res = await fetch(path, init)
@@ -81,10 +148,9 @@
       for (const s of res.body.stations) if (s.latest) stations.push({ ...s, kind: "station", key: "st:" + s.id, districtId: d.id, districtName: d.nameTh })
       for (const r of res.body.userReports) reports.push({ ...r, kind: "report", key: r.id, districtId: d.id, districtName: d.nameTh })
     })
-    // All seenAt values carry +07:00, so they sort as text.
-    reports.sort((a, b) => (a.seenAt < b.seenAt ? 1 : a.seenAt > b.seenAt ? -1 : a.id < b.id ? -1 : 1))
     state.stations = stations
-    state.reports = reports
+    state.realReports = reports
+    mergeReports()
     if (state.selected && !findItem(state.selected)) {
       state.selected = null
       closePopup()
@@ -96,9 +162,23 @@
   const inFilter = (item) => state.filter === "all" || item.districtId === state.filter
 
   const confirmText = (n) => (n > 1 ? `ยืนยัน ${n} คน` : "รายงาน 1 คน")
+  const depthText = (level, cm) => `ระดับ${DEPTH_TH[level]} ~${cm} cm`
 
-  function depthChip(level, cm) {
-    return el("span", "depth " + level, `${DEPTH_TH[level]} ~${cm} cm`)
+  /** A small staff gauge filled to the reported depth. */
+  function staff(level) {
+    const gauge = el("span", "staff " + level)
+    gauge.setAttribute("aria-hidden", "true")
+    gauge.append(el("i"))
+    return gauge
+  }
+
+  function renderSummary() {
+    const visible = state.reports.filter(inFilter)
+    for (const level of ["ankle", "knee", "waist"]) {
+      const tile = $("summary").querySelector(`.tile.${level} b`)
+      tile.textContent = String(visible.filter((r) => r.depthLevel === level).length)
+    }
+    $("updated").textContent = `อัปเดต ${bangkokIso(Date.now()).slice(11, 16)} น.`
   }
 
   function renderFilters() {
@@ -107,8 +187,9 @@
     const options = [["all", "ทุกเขต", state.reports.length], ...state.districts.map((d) => [d.id, d.nameTh, counts.get(d.id) ?? 0])]
     $("filters").replaceChildren(
       ...options.map(([id, name, n]) => {
-        const b = el("button", "chip", n ? `${name} ${n}` : name)
+        const b = el("button", "chip", name)
         b.type = "button"
+        if (n) b.append(el("b", null, String(n)))
         b.setAttribute("aria-pressed", String(state.filter === id))
         b.addEventListener("click", () => {
           state.filter = id
@@ -122,31 +203,45 @@
 
   function renderList() {
     const visible = state.reports.filter(inFilter)
-    $("count").textContent = `${visible.length} จุด`
+    $("count").textContent = visible.length ? `· ${visible.length}` : ""
+    const list = $("incidents")
     if (!visible.length) {
-      $("incidents").replaceChildren(el("li", "empty", "ยังไม่มีใครรายงานในช่วง 6 ชั่วโมงที่ผ่านมา ถ้าเห็นน้ำท่วม กด \"แจ้งจุดน้ำท่วม\" ด้านบน"))
+      const empty = el("li", "empty")
+      empty.append(icon(ICON_DROP), el("span", null, "ยังไม่มีใครรายงานในช่วง 6 ชั่วโมงที่ผ่านมา"), el("span", null, "ถ้าเห็นน้ำท่วม กด \"แจ้งจุดน้ำท่วม\""))
+      list.replaceChildren(empty)
       return
     }
-    $("incidents").replaceChildren(
+    list.replaceChildren(
       ...visible.map((r) => {
         const li = el("li")
         const b = el("button", "incident")
         b.type = "button"
         b.setAttribute("aria-current", String(state.selected === r.key))
-        const top = el("div", "top")
-        top.append(el("span", "landmark", r.landmark), depthChip(r.depthLevel, r.depthCm))
+
+        const info = el("div", "body")
+        const title = el("div", "title")
+        title.append(el("span", "landmark", r.landmark))
+        if (r.demo) title.append(el("span", "demo-badge", "จำลอง"))
         const meta = el("div", "meta")
-        meta.append(
-          el("span", null, `เขต${r.districtName}`),
-          el("span", null, r.ageLabel),
-          el("span", null, confirmText(r.confirmations))
-        )
-        b.append(top, meta, el("span", "unverified", r.label))
+        meta.append(el("span", "depth-label", depthText(r.depthLevel, r.depthCm)), el("span", "dot"), el("span", null, `เขต${r.districtName}`))
+        const foot = el("div", "foot")
+        const confirm = el("span", "confirm")
+        confirm.append(icon(ICON_PEOPLE), confirmText(r.confirmations))
+        foot.append(el("span", null, r.ageLabel), confirm, el("span", null, r.label))
+        info.append(title, meta, foot)
+
+        b.append(staff(r.depthLevel), info)
         b.addEventListener("click", () => select(r.key, true))
         li.append(b)
         return li
       })
     )
+    // Stagger the cards in on the first render only; refreshes should not replay it.
+    if (firstRender) {
+      firstRender = false
+      list.classList.add("intro")
+      setTimeout(() => list.classList.remove("intro"), 900)
+    }
   }
 
   function renderPins() {
@@ -162,6 +257,8 @@
         b.setAttribute("aria-label", `สถานีวัด ${item.nameTh} ${item.latest.levelCm} เซนติเมตร`)
       } else {
         b.classList.add("pin-report", item.depthLevel)
+        if (item.demo) b.classList.add("demo")
+        b.title = item.landmark
         if (item.confirmations > 1) b.append(el("span", null, String(Math.min(item.confirmations, 99))))
         b.setAttribute("aria-label", `${item.landmark} น้ำระดับ${DEPTH_TH[item.depthLevel]} ${item.ageLabel} ยืนยัน ${item.confirmations} คน`)
       }
@@ -170,9 +267,7 @@
         e.stopPropagation()
         select(item.key, false)
       })
-      // The drop is a rotated square; its tip sits about 5px below the element box.
-      const placement = item.kind === "station" ? { anchor: "center" } : { anchor: "bottom", offset: [0, -5] }
-      const marker = new maplibregl.Marker({ element: b, ...placement })
+      const marker = new maplibregl.Marker({ element: b, anchor: "center" })
         .setLngLat(positionOf(item))
         .addTo(map)
       pins.set(item.key, { marker, el: b })
@@ -182,22 +277,25 @@
   function popupContent(item) {
     const box = el("div", "popup")
     if (item.kind === "station") {
+      const reading = el("div", "reading", String(item.latest.levelCm))
+      reading.append(el("small", null, "cm"))
       box.append(
         el("span", "kind", `สถานีวัดระดับน้ำ · เขต${item.districtName}`),
         el("span", "landmark", item.nameTh),
-        el("span", "meta", `${item.latest.levelCm} cm · วัดเมื่อ ${item.latest.at.slice(11, 16)} น.`)
+        reading,
+        el("span", "meta", `วัดเมื่อ ${item.latest.at.slice(11, 16)} น. · ข้อมูลสมมติ`)
       )
       return box
     }
+    const head = el("div", "title")
+    head.append(staff(item.depthLevel), el("span", "landmark", item.landmark))
     const meta = el("div", "meta")
-    meta.append(el("span", null, item.ageLabel), el("span", null, confirmText(item.confirmations)))
-    box.append(
-      el("span", "kind", `รายงานจากคนในพื้นที่ · เขต${item.districtName}`),
-      el("span", "landmark", item.landmark),
-      depthChip(item.depthLevel, item.depthCm),
-      meta,
-      el("span", "unverified", `${item.label} · ตำแหน่งโดยประมาณ`)
-    )
+    meta.append(el("span", "depth-label", depthText(item.depthLevel, item.depthCm)), el("span", "dot"), el("span", null, item.ageLabel))
+    const confirm = el("span", "confirm")
+    confirm.append(icon(ICON_PEOPLE), confirmText(item.confirmations))
+    const foot = el("div", "foot")
+    foot.append(confirm, el("span", null, item.demo ? item.label : `${item.label} · ตำแหน่งโดยประมาณ`))
+    box.append(el("span", "kind", `รายงานจากคนในพื้นที่ · เขต${item.districtName}`), head, meta, foot)
     return box
   }
 
@@ -217,7 +315,7 @@
     if (!item || !map) return
     const at = positionOf(item)
     closePopup()
-    popup = new maplibregl.Popup({ offset: item.kind === "station" ? 12 : 34, maxWidth: "260px" }).setLngLat(at).setDOMContent(popupContent(item)).addTo(map)
+    popup = new maplibregl.Popup({ offset: item.kind === "station" ? 12 : 20, maxWidth: "280px" }).setLngLat(at).setDOMContent(popupContent(item)).addTo(map)
     // Closed by the user (x button or a click on the map): clear the selection.
     onPopupClose = () => {
       popup = null
@@ -229,7 +327,71 @@
     if (fly) map.flyTo({ center: at, zoom: Math.max(map.getZoom(), 13) })
   }
 
+  const FLOOD_LAYERS = ["demo-flood-edge", "demo-flood-glow", "demo-flood"]
+
+  /**
+   * Draw (or remove) the simulated flood areas under the basemap's labels. Each depth band is a
+   * fill that gets more opaque with depth, over a blurred line of the same colour so edges read
+   * as water rather than hard polygons. Safe to call any time.
+   */
+  function syncFloodLayers() {
+    $("legend").hidden = !state.demo || !map
+    if (!map || !styleReady) return
+    for (const id of FLOOD_LAYERS) if (map.getLayer(id)) map.removeLayer(id)
+    if (map.getSource("demo-flood")) map.removeSource("demo-flood")
+    if (!state.demo) return
+
+    const colour = ["interpolate", ["linear"], ["get", "depthCm"], ...FLOOD_CM.flatMap((cm, i) => [cm, cssVar(`--flood-${i + 1}`)])]
+    const beforeId = map.getStyle().layers.find((l) => l.type === "symbol")?.id
+    map.addSource("demo-flood", { type: "geojson", data: DEMO.floodAreas() })
+    map.addLayer(
+      {
+        id: "demo-flood-glow",
+        type: "line",
+        source: "demo-flood",
+        paint: {
+          "line-color": colour,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 10, 4, 15, 14],
+          "line-blur": ["interpolate", ["linear"], ["zoom"], 10, 3, 15, 10],
+          "line-opacity": 0.45
+        }
+      },
+      beforeId
+    )
+    map.addLayer(
+      {
+        id: "demo-flood",
+        type: "fill",
+        source: "demo-flood",
+        paint: {
+          "fill-color": colour,
+          "fill-opacity": ["interpolate", ["linear"], ["get", "depthCm"], 10, 0.32, 50, 0.5, 100, 0.72],
+          "fill-antialias": true
+        }
+      },
+      beforeId
+    )
+    map.addLayer(
+      {
+        id: "demo-flood-edge",
+        type: "line",
+        source: "demo-flood",
+        filter: ["==", ["get", "depthCm"], FLOOD_CM[0]],
+        paint: { "line-color": cssVar("--flood-edge"), "line-width": 1.2 }
+      },
+      beforeId
+    )
+  }
+
+  function renderDemoToggle() {
+    const button = $("demo-toggle")
+    button.hidden = !DEMO
+    button.setAttribute("aria-pressed", String(state.demo))
+  }
+
   function render() {
+    renderDemoToggle()
+    renderSummary()
     renderFilters()
     renderList()
     renderPins()
@@ -280,20 +442,35 @@
     map = new maplibregl.Map({
       container: "map",
       style: blankStyle(),
-      center: [100.6, 13.78],
-      zoom: 10.3,
+      center: state.demo ? DEMO_VIEW.center : [100.6, 13.78],
+      zoom: state.demo ? DEMO_VIEW.zoom : 10.3,
       maxBounds: BOUNDS,
       attributionControl: { compact: true }
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right")
+    // Custom layers are dropped whenever the style changes (blank → basemap), so redraw on every load.
+    map.on("style.load", () => {
+      styleReady = true
+      syncFloodLayers()
+    })
     // The tiles file is not in git. Without it the map still shows pins on a plain background.
     try {
       const probe = await fetch(TILES_URL, { headers: { range: "bytes=0-126" } })
-      if (probe.status === 206 || probe.status === 200) map.setStyle(basemapStyle())
+      hasTiles = probe.status === 206 || probe.status === 200
+      if (hasTiles) applyStyle()
       else showStatus("ยังไม่มีไฟล์แผนที่พื้นหลัง (ดู README หัวข้อแผนที่) หมุดยังดูได้ตามปกติ")
     } catch {
       showStatus("โหลดแผนที่พื้นหลังไม่ได้ หมุดยังดูได้ตามปกติ")
     }
+    // Follow the system theme: new basemap flavour and new water colours.
+    window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", applyStyle)
+  }
+
+  function applyStyle() {
+    if (!map) return
+    styleReady = false
+    // diff: false so every swap is a full load that fires "style.load" and the flood layers come back.
+    map.setStyle(hasTiles ? basemapStyle() : blankStyle(), { diff: false })
   }
 
   // Report form
@@ -390,6 +567,17 @@
   })
 
   $("report-open").addEventListener("click", openForm)
+  $("demo-toggle").addEventListener("click", () => {
+    state.demo = !state.demo
+    if (!state.demo && state.selected?.startsWith("demo:")) {
+      state.selected = null
+      closePopup()
+    }
+    mergeReports()
+    render()
+    syncFloodLayers()
+    if (state.demo && map) map.flyTo(DEMO_VIEW)
+  })
   $("report-close").addEventListener("click", () => dialog.close())
 
   async function refresh() {
