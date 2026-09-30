@@ -33,28 +33,29 @@
 
 ### 4. รวมรายงานซ้ำ (dedupe)
 
-- [ ] ไฟล์: แก้ `src/reports.ts` (key = `districtId + "\u0000" + landmark.toLowerCase()`, `confirmations` +1, ใหม่กว่าชนะ, `200 merged: true`), แก้ `tests/reports.test.ts`
-- [ ] Test ก่อน: RPT-REQ-010 AC1–6 (พิสูจน์ว่า key คำนวณหลัง mask)
+- [x] ไฟล์: แก้ `src/reports.ts` (key = `districtId + "\u0000" + landmark.toLowerCase()`, `confirmations` +1, ใหม่กว่าชนะ, `200 merged: true`), แก้ `tests/reports.test.ts`
+- [x] Test ก่อน: RPT-REQ-010 AC1–6 (พิสูจน์ว่า key คำนวณหลัง mask)
 
 ### 5. Rate limiter แบบ unit (ยังไม่ต่อสาย)
 
-- [ ] ไฟล์: ใหม่ `src/rate-limit.ts` (`createRateLimiter` sliding-window log, `clientKeyFromAddress`), ใหม่ `tests/rate-limit.test.ts`
-- [ ] Test ก่อน: RPT-REQ-008 AC1–4 ระดับ limiter, RPT-REQ-009 AC1–2 (`::ffff:` normalize, IPv6 /64)
+- [x] ไฟล์: ใหม่ `src/rate-limit.ts` (`createRateLimiter` sliding-window log, `clientKeyFromAddress`), ใหม่ `tests/rate-limit.test.ts`
+- [x] Test ก่อน: RPT-REQ-008 AC1–4 ระดับ limiter, RPT-REQ-009 AC1–2 (`::ffff:` normalize, IPv6 /64)
 
 ### 6. ต่อ rate limiter เข้า submit / handle / server
 
-- [ ] ไฟล์: แก้ `src/reports.ts` (`createReportStore(limiter?)`, ตรวจโควตาก่อน validate, `record` เฉพาะที่ยอมรับ), แก้ `src/app.ts` (`Context.clientKey?`, `Response.headers?`, `429` + `Retry-After`), แก้ `src/server.ts` (`clientKey` จาก `req.socket.remoteAddress` เท่านั้น, ส่ง `headers`), แก้ `tests/reports-api.test.ts`
-- [ ] Test ก่อน: RPT-REQ-008 AC5–6, RPT-REQ-009 AC3–5
+- [x] ไฟล์: แก้ `src/reports.ts` (`createReportStore(limiter?)`, ตรวจโควตาก่อน validate, `record` เฉพาะที่ยอมรับ), แก้ `src/app.ts` (`Context.clientKey?`, `Response.headers?`, `429` + `Retry-After`), แก้ `src/server.ts` (`clientKey` จาก `req.socket.remoteAddress` เท่านั้น, ส่ง `headers`), แก้ `tests/reports-api.test.ts`
+- [x] Test ก่อน: RPT-REQ-008 AC5–6, RPT-REQ-009 AC3–5
+  - หมายเหตุ: AC3 (`X-Forwarded-For`) test E2E อยู่ใน `tests/server.test.ts` (ขั้น 8) เพราะก่อนขั้น 8 `server.ts` listen ตอน import
 
 ### 7. อายุ การแสดงผล และลบรายงานหมดอายุ
 
-- [ ] ไฟล์: แก้ `src/reports.ts` (`DISPLAY_TTL_MS`, lazy purge, `ageMinutes`, `ageLabelTh`, เรียง `seenAt` ใหม่สุดก่อน tie ตาม id), แก้ `src/rate-limit.ts` (ตัด entry เก่า), แก้ `tests/reports-api.test.ts`
-- [ ] Test ก่อน: RPT-REQ-011 AC4–7, RPT-REQ-012 AC1–3
+- [x] ไฟล์: แก้ `src/reports.ts` (`DISPLAY_TTL_MS`, lazy purge, `ageMinutes`, `ageLabelTh`, เรียง `seenAt` ใหม่สุดก่อน tie ตาม id), แก้ `src/rate-limit.ts` (ตัด entry เก่า), แก้ `tests/reports-api.test.ts`
+- [x] Test ก่อน: RPT-REQ-011 AC4–7, RPT-REQ-012 AC1–3
 
 ### 8. `notice` ทุก response และ server ไม่รั่วเมื่อผิดพลาด
 
-- [ ] ไฟล์: แก้ `src/app.ts` (`notice` ใน 404 เดิมสองจุด คง `error` เดิม), แก้ `src/server.ts` (แยก `createAppServer(handler)`, listen เฉพาะเมื่อรันตรง, `try/catch` → `500 { notice, error: "internal" }`, `400 invalid JSON` ตายตัวมี `notice`), ใหม่ `tests/server.test.ts` (server จริงบน `127.0.0.1` port 0 ยิงเฉพาะ localhost)
-- [ ] Test ก่อน: RPT-REQ-016 AC1–4, RPT-REQ-015 AC1–2, RPT-REQ-013 AC3
+- [x] ไฟล์: แก้ `src/app.ts` (`notice` ใน 404 เดิมสองจุด คง `error` เดิม), แก้ `src/server.ts` (แยก `createAppServer(handler)`, listen เฉพาะเมื่อรันตรง, `try/catch` → `500 { notice, error: "internal" }`, `400 invalid JSON` ตายตัวมี `notice`), ใหม่ `tests/server.test.ts` (server จริงบน `127.0.0.1` port 0 ยิงเฉพาะ localhost)
+- [x] Test ก่อน: RPT-REQ-016 AC1–4, RPT-REQ-015 AC1–2, RPT-REQ-013 AC3
 
 ## ความเสี่ยงและเรื่องที่ยังไม่แน่ใจ
 
@@ -80,9 +81,9 @@
 
 ## Verification
 
-- [ ] ทุกขั้น: `npm test`, `npm run lint` ผ่าน และ `git diff --stat` ไม่แตะไฟล์ที่ห้ามแก้
-- [ ] จบขั้น 8: `npm run dev` แล้วลองกับ `localhost:3000` เท่านั้น
-  - [ ] `curl -X POST localhost:3000/districts/lat-phrao/reports -d '{"landmark":"ปากซอยลาดพร้าว 71","depth":"knee","seenAt":"<now ISO with Z>"}'` แล้ว `curl localhost:3000/districts/lat-phrao` เห็น `userReports`
-  - [ ] ส่งซ้ำเห็น `merged: true`
-  - [ ] ส่งครบ 6 ครั้งเห็น `429` + header `Retry-After`
-  - [ ] ใส่เบอร์ในจุดสังเกตเห็น `***`
+- [x] ทุกขั้น: `npm test`, `npm run lint` ผ่าน และ `git diff --stat` ไม่แตะไฟล์ที่ห้ามแก้
+- [x] จบขั้น 8: `npm run dev` แล้วลองกับ `localhost:3000` เท่านั้น (รันจริงด้วย `PORT=3997 tsx watch` เพราะ 3000 มี process อื่นอยู่)
+  - [x] `curl -X POST localhost:3000/districts/lat-phrao/reports -d '{"landmark":"ปากซอยลาดพร้าว 71","depth":"knee","seenAt":"<now ISO with Z>"}'` แล้ว `curl localhost:3000/districts/lat-phrao` เห็น `userReports`
+  - [x] ส่งซ้ำเห็น `merged: true`
+  - [x] ส่งครบ 6 ครั้งเห็น `429` + header `Retry-After`
+  - [x] ใส่เบอร์ในจุดสังเกตเห็น `***`

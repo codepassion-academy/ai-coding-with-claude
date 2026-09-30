@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto"
+import { createRateLimiter, type RateLimiter } from "./rate-limit.ts"
 import { toBangkokIso } from "./time.ts"
 
 export type DepthLevel = "ankle" | "knee" | "waist"
@@ -7,8 +8,12 @@ export const DEPTH_CM: Record<DepthLevel, number> = { ankle: 10, knee: 50, waist
 export const USER_REPORT_LABEL = "ผู้ใช้รายงาน ยังไม่ยืนยัน"
 
 export const MAX_BACKDATE_MS = 3 * 60 * 60 * 1000
+export const DISPLAY_TTL_MS = 6 * 60 * 60 * 1000
 export const LANDMARK_MIN = 2
 export const LANDMARK_MAX = 80
+
+// Rate limit constants live in rate-limit.ts to avoid an import cycle; re-exported so spec §2 names resolve here.
+export { RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS } from "./rate-limit.ts"
 
 /** Kept in memory only. No IP, user agent, name, phone or coordinates (RPT-REQ-013). */
 export type Report = {
@@ -31,6 +36,8 @@ export type PublicReport = {
   depthLevel: DepthLevel
   depthCm: number
   seenAt: string
+  ageMinutes: number
+  ageLabel: string
   confirmations: number
 }
 
@@ -134,37 +141,84 @@ export function validateReportInput(input: unknown, now: Date): ValidInput | Inv
   return { ok: true, landmark, depthLevel: depth, seenAt }
 }
 
-export function createReportStore(): ReportStore {
-  const reports: Report[] = []
+/** Dedupe key (RPT-REQ-010). `landmarkKey` comes from the masked landmark, so phones never reach it. */
+function dedupeKey(districtId: string, landmarkKey: string): string {
+  return districtId + "\u0000" + landmarkKey
+}
+
+/** Each store gets its own limiter unless one is passed in, so tests never share quota (RPT-REQ-017 AC4). */
+export function createReportStore(limiter: RateLimiter = createRateLimiter()): ReportStore {
+  const reports = new Map<string, Report>()
+
+  /** Lazy purge on every POST and GET (RPT-REQ-012): expired reports leave memory, no timer. */
+  function purge(now: Date): void {
+    for (const [key, report] of reports) {
+      if (now.getTime() - report.seenAt.getTime() >= DISPLAY_TTL_MS) reports.delete(key)
+    }
+    limiter.prune(now)
+  }
 
   return {
-    submit(input, districtId, _clientKey, now) {
+    submit(input, districtId, clientKey, now) {
+      purge(now)
+      // Quota before validation (RPT-REQ-008). Only accepted reports are recorded (A2).
+      const quota = limiter.check(clientKey, now)
+      if (!quota.allowed) return { ok: false, status: 429, error: "rate_limited", retryAfterSec: quota.retryAfterSec }
+
       const valid = validateReportInput(input, now)
       if (!valid.ok) return valid
+
+      const landmarkKey = valid.landmark.toLowerCase()
+      const key = dedupeKey(districtId, landmarkKey)
+      const existing = reports.get(key)
+      if (existing) {
+        existing.confirmations += 1
+        // A1: newer wins. An older or same-time report only adds a confirmation.
+        if (valid.seenAt.getTime() > existing.seenAt.getTime()) {
+          existing.seenAt = valid.seenAt
+          existing.depthLevel = valid.depthLevel
+          existing.depthCm = DEPTH_CM[valid.depthLevel]
+        }
+        limiter.record(clientKey, now)
+        return { ok: true, merged: true, report: existing }
+      }
 
       const report: Report = {
         id: randomUUID(),
         districtId,
         landmark: valid.landmark,
-        landmarkKey: valid.landmark.toLowerCase(),
+        landmarkKey,
         depthLevel: valid.depthLevel,
         depthCm: DEPTH_CM[valid.depthLevel],
         seenAt: valid.seenAt,
         confirmations: 1
       }
-      reports.push(report)
+      reports.set(key, report)
+      limiter.record(clientKey, now)
       return { ok: true, merged: false, report }
     },
-    activeIn(districtId, _now) {
-      return reports.filter((r) => r.districtId === districtId)
+    activeIn(districtId, now) {
+      purge(now)
+      return [...reports.values()]
+        .filter((r) => r.districtId === districtId)
+        .sort((a, b) => b.seenAt.getTime() - a.seenAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
     },
     size() {
-      return reports.length
+      return reports.size
     }
   }
 }
 
-export function toPublicReport(r: Report): PublicReport {
+/** Thai "seen N ago" label (RPT-REQ-011). */
+export function ageLabelTh(ageMinutes: number): string {
+  if (ageMinutes < 1) return "เห็นเมื่อสักครู่"
+  if (ageMinutes < 60) return `เห็นเมื่อ ${ageMinutes} นาทีก่อน`
+  return `เห็นเมื่อ ${Math.floor(ageMinutes / 60)} ชั่วโมงก่อน`
+}
+
+export function toPublicReport(r: Report, now: Date): PublicReport {
+  // Clamped at 0 so a clock that reads earlier than seenAt never shows a negative age.
+  const ageMinutes = Math.max(0, Math.floor((now.getTime() - r.seenAt.getTime()) / 60_000))
   return {
     id: r.id,
     source: "user-report",
@@ -174,6 +228,8 @@ export function toPublicReport(r: Report): PublicReport {
     depthLevel: r.depthLevel,
     depthCm: r.depthCm,
     seenAt: toBangkokIso(r.seenAt),
+    ageMinutes,
+    ageLabel: ageLabelTh(ageMinutes),
     confirmations: r.confirmations
   }
 }

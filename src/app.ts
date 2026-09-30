@@ -3,9 +3,10 @@ import { createReportStore, toPublicReport, type ReportStore } from "./reports.t
 import { latestReading, stationsIn } from "./stations.ts"
 import { toBangkokIso } from "./time.ts"
 
-export type Response = { status: number; body: unknown }
+export type Response = { status: number; body: unknown; headers?: Record<string, string> }
 
-export type Context = { now: Date; reports?: ReportStore }
+/** `clientKey` is only for the rate limiter; it must never reach a report, response or log (RPT-REQ-009). */
+export type Context = { now: Date; clientKey?: string; reports?: ReportStore }
 
 const defaultReports = createReportStore()
 
@@ -23,21 +24,24 @@ export function handle(method: string, path: string, body: unknown, ctx: Context
   if (method === "POST" && reportsMatch) {
     const districtId = reportsMatch[1] ?? ""
     if (!districts.has(districtId)) return { status: 404, body: { notice: NOTICE, error: "unknown district" } }
-    const result = reports.submit(body, districtId, "unknown", ctx.now)
+    // No key means the shared "unknown" bucket: still limited, fail closed (RPT-REQ-009 AC5).
+    const result = reports.submit(body, districtId, ctx.clientKey ?? "unknown", ctx.now)
     if (!result.ok) {
       const { ok: _ok, status, ...error } = result
-      return { status, body: { notice: NOTICE, ...error } }
+      const response: Response = { status, body: { notice: NOTICE, ...error } }
+      if (result.retryAfterSec !== undefined) response.headers = { "Retry-After": String(result.retryAfterSec) }
+      return response
     }
     return {
       status: result.merged ? 200 : 201,
-      body: { notice: NOTICE, merged: result.merged, report: toPublicReport(result.report) }
+      body: { notice: NOTICE, merged: result.merged, report: toPublicReport(result.report, ctx.now) }
     }
   }
 
   const districtMatch = path.match(/^\/districts\/([a-z-]+)$/)
   if (method === "GET" && districtMatch) {
     const district = districts.get(districtMatch[1] ?? "")
-    if (!district) return { status: 404, body: { error: "unknown district" } }
+    if (!district) return { status: 404, body: { notice: NOTICE, error: "unknown district" } }
     const stations = stationsIn(district.id).map((s) => {
       const latest = latestReading(s, ctx.now)
       return {
@@ -46,9 +50,9 @@ export function handle(method: string, path: string, body: unknown, ctx: Context
         latest: latest ? { at: toBangkokIso(latest.at), levelCm: latest.levelCm } : null
       }
     })
-    const userReports = reports.activeIn(district.id, ctx.now).map(toPublicReport)
+    const userReports = reports.activeIn(district.id, ctx.now).map((r) => toPublicReport(r, ctx.now))
     return { status: 200, body: { notice: NOTICE, district, stations, userReports } }
   }
 
-  return { status: 404, body: { error: "not found" } }
+  return { status: 404, body: { notice: NOTICE, error: "not found" } }
 }

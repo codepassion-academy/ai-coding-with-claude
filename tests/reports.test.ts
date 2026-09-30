@@ -168,3 +168,99 @@ describe("validateReportInput masking (RPT-REQ-005)", () => {
     }
   })
 })
+
+describe("dedupe in the store (RPT-REQ-010)", () => {
+  const at = (iso: string) => ({ seenAt: iso })
+  const t1 = "2026-09-30T12:00:00Z"
+  const t2 = "2026-09-30T12:10:00Z"
+
+  function submit(store: ReturnType<typeof createReportStore>, landmark: string, extra: object = {}, districtId = "lat-phrao") {
+    return store.submit({ landmark, depth: "knee", seenAt: t1, ...extra }, districtId, "test", now)
+  }
+
+  it("AC1: the same report twice is one entry with confirmations 2, same id, merged=true", () => {
+    const store = createReportStore()
+    const first = submit(store, "ปากซอย ลาดพร้าว 71")
+    const second = submit(store, "ปากซอย ลาดพร้าว 71")
+    expect(first).toMatchObject({ ok: true, merged: false })
+    expect(second).toMatchObject({ ok: true, merged: true, report: { confirmations: 2 } })
+    expect(second.ok && first.ok && second.report.id).toBe(first.ok && first.report.id)
+    expect(store.activeIn("lat-phrao", now)).toHaveLength(1)
+    expect(store.size()).toBe(1)
+  })
+
+  it("AC2 / E9: extra spaces, trailing space and zero-width still merge", () => {
+    const store = createReportStore()
+    submit(store, "ปากซอย ลาดพร้าว 71")
+    for (const variant of ["ปากซอย  ลาดพร้าว 71", "ปากซอย ลาดพร้าว 71 ", "ปากซอย​ ลาดพร้าว 71"]) {
+      expect(submit(store, variant), variant).toMatchObject({ ok: true, merged: true })
+    }
+    expect(store.activeIn("lat-phrao", now)).toEqual([expect.objectContaining({ confirmations: 4 })])
+  })
+
+  it("AC3: English upper/lower case is the same landmark", () => {
+    const store = createReportStore()
+    submit(store, "Central Ladprao")
+    expect(submit(store, "CENTRAL ladprao")).toMatchObject({ ok: true, merged: true })
+    expect(store.size()).toBe(1)
+  })
+
+  it("AC3: the first wording is kept for display", () => {
+    const store = createReportStore()
+    submit(store, "Central Ladprao")
+    submit(store, "CENTRAL ladprao")
+    expect(store.activeIn("lat-phrao", now)[0]?.landmark).toBe("Central Ladprao")
+  })
+
+  it("AC4 / E10: the same text in another district does not merge", () => {
+    const store = createReportStore()
+    submit(store, "ปากซอย 7", {}, "lat-phrao")
+    expect(submit(store, "ปากซอย 7", {}, "bang-kapi")).toMatchObject({ ok: true, merged: false })
+    expect(store.activeIn("lat-phrao", now)).toHaveLength(1)
+    expect(store.activeIn("bang-kapi", now)).toHaveLength(1)
+  })
+
+  it("E11 / A1: a newer report wins seenAt and depth", () => {
+    const store = createReportStore()
+    submit(store, "ปากซอย 7", { depth: "ankle", ...at(t1) })
+    const merged = submit(store, "ปากซอย 7", { depth: "waist", ...at(t2) })
+    expect(merged).toMatchObject({
+      ok: true,
+      merged: true,
+      report: { depthLevel: "waist", depthCm: 100, seenAt: new Date(t2), confirmations: 2 }
+    })
+  })
+
+  it("AC5: an older report only adds a confirmation", () => {
+    const store = createReportStore()
+    submit(store, "ปากซอย 7", { depth: "waist", ...at(t2) })
+    const merged = submit(store, "ปากซอย 7", { depth: "ankle", ...at(t1) })
+    expect(merged).toMatchObject({
+      ok: true,
+      merged: true,
+      report: { depthLevel: "waist", depthCm: 100, seenAt: new Date(t2), confirmations: 2 }
+    })
+  })
+
+  it("A1: the same seenAt is not newer, so depth stays", () => {
+    const store = createReportStore()
+    submit(store, "ปากซอย 7", { depth: "knee", ...at(t1) })
+    const merged = submit(store, "ปากซอย 7", { depth: "waist", ...at(t1) })
+    expect(merged).toMatchObject({ ok: true, merged: true, report: { depthLevel: "knee", confirmations: 2 } })
+  })
+
+  it("AC6: different phones in the same text merge, so the key is built after masking", () => {
+    const store = createReportStore()
+    submit(store, "หน้าร้าน 0811111111")
+    const merged = submit(store, "หน้าร้าน 0822222222")
+    expect(merged).toMatchObject({ ok: true, merged: true, report: { landmark: "หน้าร้าน ***", confirmations: 2 } })
+    expect(JSON.stringify(store.activeIn("lat-phrao", now))).not.toMatch(/0811111111|0822222222/)
+  })
+
+  it("a rejected report does not touch an existing one", () => {
+    const store = createReportStore()
+    submit(store, "ปากซอย 7")
+    expect(submit(store, "ปากซอย 7", { depth: "chest" })).toMatchObject({ ok: false })
+    expect(store.activeIn("lat-phrao", now)[0]?.confirmations).toBe(1)
+  })
+})
