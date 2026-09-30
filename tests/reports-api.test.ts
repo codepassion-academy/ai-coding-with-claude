@@ -237,6 +237,14 @@ describe("GET /districts/:id reports", () => {
     expect(res.body).toMatchObject({ stations: [{ latest: { levelCm: 104 } }] })
   })
 
+  it("RPT-REQ-010 AC2 keeps an expired report in the store but stops showing it", () => {
+    const { app, store } = setup()
+    app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    const body = app("GET", "/districts/sai-mai", undefined, { now: new Date("2026-09-30T18:20:00Z") }).body as DistrictBody
+    expect(body.reports.items).toEqual([])
+    expect(store.all()).toHaveLength(1)
+  })
+
   it("RPT-REQ-009 AC5 always carries the unverified label", () => {
     const { app } = setup()
     const body = app("GET", "/districts/sai-mai", undefined, { now: NOW }).body as DistrictBody

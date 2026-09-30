@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { districts } from "../src/districts.ts"
-import { maskPhoneNumbers, PHONE_MASK, severityOf, validateReportInput } from "../src/reports.ts"
+import { maskPhoneNumbers, PHONE_MASK, severityOf, validateReportInput, visibleItems, type Report } from "../src/reports.ts"
 
 const NOW = new Date("2026-09-30T12:30:00Z")
 
@@ -134,6 +134,51 @@ describe("maskPhoneNumbers", () => {
 
   it.each(["ซอยลาดพร้าว 101 หน้าเซเว่น", "สายไหม 15 แยก 3", "หมู่บ้าน 12345678"])("RPT-REQ-006 AC3 leaves %s alone", (text) => {
     expect(maskPhoneNumbers(text)).toBe(text)
+  })
+})
+
+function report(overrides: Partial<Report> = {}): Report {
+  return {
+    id: "r-1",
+    districtId: "sai-mai",
+    landmark: "ปากซอยสายไหม 15",
+    landmarkKey: "ปากซอยสายไหม15",
+    depthCm: 25,
+    observedAt: "2026-09-30T12:20:00.000Z",
+    receivedAt: "2026-09-30T12:20:00.000Z",
+    reporterHash: "a".repeat(64),
+    hiddenAt: null,
+    ...overrides
+  }
+}
+
+const itemsAt = (iso: string, reports: Report[] = [report()]) => visibleItems(reports, "sai-mai", new Date(iso))
+
+describe("visibleItems: age", () => {
+  it("RPT-REQ-010 AC1 still shows a report one second before it turns 6 hours old", () => {
+    expect(itemsAt("2026-09-30T18:19:59Z")).toMatchObject([{ minutesAgo: 359 }])
+  })
+
+  it("RPT-REQ-010 AC2 stops showing a report at exactly 6 hours", () => {
+    expect(itemsAt("2026-09-30T18:20:00Z")).toEqual([])
+  })
+
+  it("RPT-REQ-010 AC3 rounds minutesAgo down to whole minutes", () => {
+    expect(itemsAt("2026-09-30T12:20:59Z")).toMatchObject([{ minutesAgo: 0 }])
+    expect(itemsAt("2026-09-30T12:21:00Z")).toMatchObject([{ minutesAgo: 1 }])
+  })
+
+  it("RPT-REQ-010 AC4 never gives a negative or fractional minutesAgo", () => {
+    expect(itemsAt("2026-09-30T12:19:30Z")).toMatchObject([{ minutesAgo: 0 }])
+  })
+
+  it("RPT-REQ-009 AC6 lists the most recently seen report first", () => {
+    const reports = [
+      report({ id: "r-1", landmark: "จุด ก", landmarkKey: "จุดก", observedAt: "2026-09-30T11:00:00.000Z" }),
+      report({ id: "r-2", landmark: "จุด ข", landmarkKey: "จุดข", observedAt: "2026-09-30T12:20:00.000Z" }),
+      report({ id: "r-3", landmark: "จุด ค", landmarkKey: "จุดค", observedAt: "2026-09-30T11:40:00.000Z" })
+    ]
+    expect(itemsAt("2026-09-30T12:30:00Z", reports).map((item) => item.landmark)).toEqual(["จุด ข", "จุด ค", "จุด ก"])
   })
 })
 

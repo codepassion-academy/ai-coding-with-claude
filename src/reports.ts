@@ -59,19 +59,18 @@ export function severityOf(depthCm: number): Severity {
 
 /** The reports of one district as the public sees them. Computed on every response, never stored. */
 export function visibleItems(reports: readonly Report[], districtId: string, now: Date): ReportItem[] {
+  const ageMs = (r: Report) => now.getTime() - new Date(r.observedAt).getTime()
   return reports
-    .filter((r) => r.districtId === districtId && r.hiddenAt === null)
-    .map((r) => {
-      const observedAt = new Date(r.observedAt)
-      return {
-        landmark: r.landmark,
-        depthCm: r.depthCm,
-        severity: severityOf(r.depthCm),
-        observedAt: toBangkokIso(observedAt),
-        minutesAgo: Math.floor((now.getTime() - observedAt.getTime()) / 60_000),
-        reporterCount: 1
-      }
-    })
+    .filter((r) => r.districtId === districtId && r.hiddenAt === null && ageMs(r) < REPORT_TTL_MS)
+    .sort((a, b) => ageMs(a) - ageMs(b))
+    .map((r) => ({
+      landmark: r.landmark,
+      depthCm: r.depthCm,
+      severity: severityOf(r.depthCm),
+      observedAt: toBangkokIso(new Date(r.observedAt)),
+      minutesAgo: Math.max(0, Math.floor(ageMs(r) / 60_000)),
+      reporterCount: 1
+    }))
 }
 
 /** Whether a reporter has used up the quota of accepted reports in the sliding window (RPT-REQ-007). */
