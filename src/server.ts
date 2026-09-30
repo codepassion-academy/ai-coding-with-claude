@@ -1,7 +1,10 @@
 import { createServer } from "node:http"
-import { handle } from "./app.ts"
+import { createApp } from "./app.ts"
+import { createFileReportStore } from "./report-store.ts"
 
 const port = Number(process.env.PORT ?? 3000)
+
+const app = createApp({ store: createFileReportStore(process.env.REPORTS_FILE ?? "var/reports.json") })
 
 createServer((req, res) => {
   let raw = ""
@@ -17,7 +20,8 @@ createServer((req, res) => {
       }
     }
     const path = new URL(req.url ?? "/", "http://x").pathname
-    const { status, body: out } = handle(req.method ?? "GET", path, body, { now: new Date() })
+    const ctx = { now: new Date(), clientIp: req.socket.remoteAddress }
+    const { status, body: out } = app(req.method ?? "GET", path, body, ctx)
     res.writeHead(status, { "content-type": "application/json; charset=utf-8" }).end(JSON.stringify(out))
   })
 }).listen(port, () => console.log(`น้ำท่วมไหม listening on http://localhost:${port}`))
