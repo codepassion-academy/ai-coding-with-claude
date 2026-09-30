@@ -68,14 +68,23 @@
 - [ ] `__proto__` จาก `JSON.parse` เป็น own property ตรวจด้วย `Object.keys` (ทำแล้วในขั้น 2)
 - [ ] Test server (ขั้น 8): import แล้วต้องไม่ listen port 3000 เอง และ `fetch` ใน test ยิงได้เฉพาะ localhost
 
+### 9. หน้าเว็บแผนที่ (นอก spec เดิม ตามที่ Save สั่ง และ ADR 0001 accepted)
+
+- [x] ไฟล์: ใหม่ `src/static.ts` (whitelist `/`, `/app.js`, `/app.css`, `/tiles/bangkok.pmtiles` + Range, CSP), แก้ `src/server.ts` (`createAppServer(handler, { publicDir })`), ใหม่ `public/index.html`, `public/app.js`, `public/app.css`, ใหม่ `tests/web.test.ts`
+- [x] MapLibre 5.24.0 / pmtiles 4.5.0 / @protomaps/basemaps 5.7.2 จาก unpkg ปักเวอร์ชัน + SRI ไม่แก้ `package.json`
+- [x] หมุดวางตามเขตโดยประมาณ API ยังไม่เก็บพิกัด (spec §5, RPT-REQ-013)
+- [ ] ยังไม่ได้ลองเปิดใน browser จริง (headless Brave ไม่ render ในเครื่องนี้) ต้องเปิด `localhost:3000` ดูด้วยตา
+- [ ] ไฟล์ `public/tiles/bangkok.pmtiles` ต้องสร้างเองตาม README ยังไม่มีในเครื่อง
+- [ ] glyphs/sprite ยังดึงจาก `protomaps.github.io` และ MapLibre/pmtiles/basemaps JS+CSS จาก unpkg ทำให้ IP ของผู้ชมไปถึงบุคคลที่สาม ต้อง self-host ตาม ADR 0001
+
 ## Later (ไม่ทำรอบนี้)
 
-- [ ] `src/read-body.ts` + `413 payload_too_large` ไม่ parse และมี `notice` (RPT-REQ-014 AC1–2, `tests/read-body.test.ts`)
-- [ ] `MAX_ACTIVE_REPORTS` → `503 store_full`, merge ยังได้, 503 ไม่กินโควตา (RPT-REQ-014 AC3–4)
-- [ ] Spy `console.*` / `process.stdout|stderr.write` หา IP / ข้อความ / เบอร์ (RPT-REQ-013 AC1), `Object.keys(report)` ตรง spec §3.1 (RPT-REQ-013 AC2)
-- [ ] Stub `fetch` และ `node:http(s).request` ว่าไม่ถูกเรียก (RPT-REQ-017 AC2), ไม่มีการเขียนไฟล์ (RPT-REQ-012 AC4)
-- [ ] `README.md` เพิ่มตัวอย่าง `curl -X POST` เฉพาะ `localhost`
-- [ ] คำเตือน UI "อย่าใส่เลขที่บ้านหรือเบอร์โทร" และ escape จุดสังเกตตอนแสดง (spec §7) — งานของ plan UI
+- [x] `src/read-body.ts` + `413 payload_too_large` ไม่ parse และมี `notice` (RPT-REQ-014 AC1–2, `tests/read-body.test.ts`)
+- [x] `MAX_ACTIVE_REPORTS` → `503 store_full`, merge ยังได้, 503 ไม่กินโควตา (RPT-REQ-014 AC3–4)
+- [x] Spy `console.*` / `process.stdout|stderr.write` หา IP / ข้อความ / เบอร์ (RPT-REQ-013 AC1), `Object.keys(report)` ตรง spec §3.1 (RPT-REQ-013 AC2)
+- [x] Stub `fetch` และ `node:http(s).request` ว่าไม่ถูกเรียก (RPT-REQ-017 AC2), ไม่มีการเขียนไฟล์ (RPT-REQ-012 AC4)
+- [x] `README.md` เพิ่มตัวอย่าง `curl -X POST` เฉพาะ `localhost`
+- [x] คำเตือน UI "อย่าใส่เลขที่บ้านหรือเบอร์โทร" และ escape จุดสังเกตตอนแสดง (spec §7) — ทำในขั้น 9 (`textContent` ทุกจุด, test กัน `innerHTML`)
 - [ ] ตัวชี้วัดที่ต้องใช้ผู้ใช้จริง (spec §8), Q8–Q10 (deploy / PDPA / moderation)
 - [ ] ปิดช่องเลขที่บ้านไม่มีคำนำ, อีเมล, LINE ID (นอกขอบเขตตาม spec §5)
 

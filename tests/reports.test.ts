@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest"
-import { createReportStore, LANDMARK_MAX, maskPersonalData, normalizeLandmark, validateReportInput } from "../src/reports.ts"
+import { createRateLimiter } from "../src/rate-limit.ts"
+import {
+  createReportStore,
+  DISPLAY_TTL_MS,
+  LANDMARK_MAX,
+  MAX_ACTIVE_REPORTS,
+  maskPersonalData,
+  normalizeLandmark,
+  validateReportInput
+} from "../src/reports.ts"
 
 describe("normalizeLandmark (RPT-REQ-004)", () => {
   it("AC1: accepts exactly 80 code points and rejects 81", () => {
@@ -262,5 +271,47 @@ describe("dedupe in the store (RPT-REQ-010)", () => {
     submit(store, "ปากซอย 7")
     expect(submit(store, "ปากซอย 7", { depth: "chest" })).toMatchObject({ ok: false })
     expect(store.activeIn("lat-phrao", now)[0]?.confirmations).toBe(1)
+  })
+})
+
+describe("store capacity (RPT-REQ-014)", () => {
+  const seenAt = "2026-09-30T12:00:00Z"
+  const body = (landmark: string) => ({ landmark, depth: "knee", seenAt })
+
+  /** A store with MAX_ACTIVE_REPORTS reports from many clients, so the fill itself is not rate-limited. */
+  function fullStore() {
+    const store = createReportStore(createRateLimiter())
+    for (let i = 0; i < MAX_ACTIVE_REPORTS; i++) {
+      const result = store.submit(body(`จุดที่ ${i}`), "lat-phrao", `filler-${i}`, now)
+      if (!result.ok) throw new Error(`fill failed at ${i}`)
+    }
+    return store
+  }
+
+  it("MAX_ACTIVE_REPORTS is 1000 (spec §2)", () => {
+    expect(MAX_ACTIVE_REPORTS).toBe(1000)
+  })
+
+  it("AC3 / E23: when full, a new report is 503 store_full and nothing is stored", () => {
+    const store = fullStore()
+    expect(store.submit(body("จุดใหม่"), "sai-mai", "someone", now)).toEqual({ ok: false, status: 503, error: "store_full" })
+    expect(store.size()).toBe(MAX_ACTIVE_REPORTS)
+  })
+
+  it("AC3: when full, a duplicate still merges", () => {
+    const store = fullStore()
+    expect(store.submit(body("จุดที่ 7"), "lat-phrao", "someone", now)).toMatchObject({ ok: true, merged: true, report: { confirmations: 2 } })
+  })
+
+  it("AC4: 503 does not use up quota", () => {
+    const store = fullStore()
+    for (let i = 0; i < 10; i++) expect(store.submit(body(`ใหม่ ${i}`), "sai-mai", "k", now)).toMatchObject({ status: 503 })
+    for (let i = 0; i < 5; i++) expect(store.submit(body(`จุดที่ ${i}`), "lat-phrao", "k", now)).toMatchObject({ ok: true, merged: true })
+  })
+
+  it("expired reports free their place (purge runs before the capacity check)", () => {
+    const store = fullStore()
+    const later = new Date(now.getTime() + DISPLAY_TTL_MS)
+    expect(store.submit({ ...body("จุดใหม่"), seenAt: later.toISOString() }, "sai-mai", "someone", later)).toMatchObject({ ok: true, merged: false })
   })
 })

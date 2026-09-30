@@ -7,3 +7,5 @@ CLAUDE.local.md
 .claude/
 .hermes/
 .kiro
+# Map tiles are downloaded per machine (README: หน้าเว็บแผนที่), not committed
+public/tiles/

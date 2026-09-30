@@ -1,8 +1,10 @@
-import { createServer, type Server } from "node:http"
+import { createServer, type Server, type ServerResponse } from "node:http"
 import { resolve } from "node:path"
 import { fileURLToPath } from "node:url"
 import { handle, NOTICE, type Context, type Response } from "./app.ts"
 import { clientKeyFromAddress } from "./rate-limit.ts"
+import { readBody } from "./read-body.ts"
+import { DEFAULT_PUBLIC_DIR, serveStatic } from "./static.ts"
 
 /** Same shape as `handle`, but the server always passes a context. */
 export type Handler = (method: string, path: string, body: unknown, ctx: Context) => Response
@@ -12,36 +14,48 @@ const JSON_TYPE = "application/json; charset=utf-8"
 /** Fixed bodies: never the parser message or the exception text (RPT-REQ-013 AC3, RPT-REQ-015). */
 const INVALID_JSON = JSON.stringify({ notice: NOTICE, error: "invalid JSON" })
 const INTERNAL = JSON.stringify({ notice: NOTICE, error: "internal" })
+const TOO_LARGE = JSON.stringify({ notice: NOTICE, error: "payload_too_large" })
 
-/** Thin node:http adapter around `handle`. Takes the handler so tests can inject a store or a failure. */
-export function createAppServer(handler: Handler = handle): Server {
-  return createServer((req, res) => {
-    let raw = ""
-    req.on("data", (chunk) => (raw += chunk))
-    req.on("end", () => {
+function send(res: ServerResponse, status: number, payload: string, headers: Record<string, string> = {}): void {
+  if (!res.headersSent) res.writeHead(status, { "content-type": JSON_TYPE, ...headers })
+  res.end(payload)
+}
+
+export type ServerOptions = { publicDir?: string }
+
+/**
+ * Thin node:http adapter: the map page's fixed list of files first, then `handle` for the API.
+ * Takes the handler so tests can inject a store or a failure, and the folder so tests can use fake tiles.
+ */
+export function createAppServer(handler: Handler = handle, options: ServerOptions = {}): Server {
+  const publicDir = options.publicDir ?? DEFAULT_PUBLIC_DIR
+  return createServer(async (req, res) => {
+    try {
+      const path = new URL(req.url ?? "/", "http://x").pathname
+      if (serveStatic(req, res, path, publicDir)) return
+
+      const read = await readBody(req)
+      // Close the connection so the rest of an oversized upload is not read (RPT-REQ-014).
+      if (!read.ok) return send(res, 413, TOO_LARGE, { connection: "close" })
+
       let body: unknown = undefined
-      if (raw) {
+      if (read.raw) {
         try {
-          body = JSON.parse(raw)
+          body = JSON.parse(read.raw)
         } catch {
-          res.writeHead(400, { "content-type": JSON_TYPE }).end(INVALID_JSON)
-          return
+          return send(res, 400, INVALID_JSON)
         }
       }
-      try {
-        const path = new URL(req.url ?? "/", "http://x").pathname
-        // Socket address only. Never X-Forwarded-For / Forwarded: the client can fake those (RPT-REQ-009).
-        const clientKey = clientKeyFromAddress(req.socket.remoteAddress)
-        const { status, body: out, headers } = handler(req.method ?? "GET", path, body, { now: new Date(), clientKey })
-        // Serialize before writeHead so a throw here still becomes a clean 500.
-        const payload = JSON.stringify(out)
-        res.writeHead(status, { "content-type": JSON_TYPE, ...headers }).end(payload)
-      } catch {
-        // Nothing from the error is logged or returned: it may hold input or paths (RPT-REQ-013, RPT-REQ-015).
-        if (!res.headersSent) res.writeHead(500, { "content-type": JSON_TYPE })
-        res.end(INTERNAL)
-      }
-    })
+
+      // Socket address only. Never X-Forwarded-For / Forwarded: the client can fake those (RPT-REQ-009).
+      const clientKey = clientKeyFromAddress(req.socket.remoteAddress)
+      const { status, body: out, headers } = handler(req.method ?? "GET", path, body, { now: new Date(), clientKey })
+      // Serialize before writing the head so a throw here still becomes a clean 500.
+      send(res, status, JSON.stringify(out), headers)
+    } catch {
+      // Nothing from the error is logged or returned: it may hold input or paths (RPT-REQ-013, RPT-REQ-015).
+      send(res, 500, INTERNAL)
+    }
   })
 }
 

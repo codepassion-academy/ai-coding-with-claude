@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: accepted
 ---
 
 # แผนที่ใช้ MapLibre GL JS + PMTiles ที่ host เอง ไม่ใช้ Google Maps หรือ Mapbox

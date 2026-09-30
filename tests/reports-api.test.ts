@@ -2,7 +2,14 @@ import { describe, expect, it } from "vitest"
 import { handle, NOTICE } from "../src/app.ts"
 import { districts } from "../src/districts.ts"
 import { createRateLimiter } from "../src/rate-limit.ts"
-import { ageLabelTh, createReportStore, DISPLAY_TTL_MS, RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS } from "../src/reports.ts"
+import {
+  ageLabelTh,
+  createReportStore,
+  DISPLAY_TTL_MS,
+  MAX_ACTIVE_REPORTS,
+  RATE_LIMIT_MAX,
+  RATE_LIMIT_WINDOW_MS
+} from "../src/reports.ts"
 
 const now = new Date("2026-09-30T12:30:00Z")
 const seenAt = "2026-09-30T12:00:00Z"
@@ -305,6 +312,19 @@ describe("expired reports are removed (RPT-REQ-012)", () => {
     expect(limiter.size()).toBe(1)
     handle("GET", "/districts/sai-mai", undefined, { ...ctx, now: new Date(now.getTime() + RATE_LIMIT_WINDOW_MS) })
     expect(limiter.size()).toBe(0)
+  })
+})
+
+describe("full store through the API (RPT-REQ-014, RPT-REQ-016 AC1)", () => {
+  it("a new report into a full store is 503 store_full with notice; a duplicate is 200", () => {
+    const { ctx } = setup()
+    for (let i = 0; i < MAX_ACTIVE_REPORTS; i++) {
+      handle("POST", "/districts/lat-phrao/reports", { ...valid, landmark: `จุด ${i}` }, { ...ctx, clientKey: `c${i}` })
+    }
+    const full = handle("POST", "/districts/sai-mai/reports", valid, { ...ctx, clientKey: "x" })
+    expect(full.status).toBe(503)
+    expect(full.body).toEqual({ notice: NOTICE, error: "store_full" })
+    expect(handle("POST", "/districts/lat-phrao/reports", { ...valid, landmark: "จุด 3" }, { ...ctx, clientKey: "x" }).status).toBe(200)
   })
 })
 

@@ -2,7 +2,7 @@ import { Server } from "node:http"
 import type { AddressInfo } from "node:net"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import { handle, NOTICE } from "../src/app.ts"
-import { createReportStore, RATE_LIMIT_MAX } from "../src/reports.ts"
+import { createReportStore, MAX_BODY_BYTES, RATE_LIMIT_MAX } from "../src/reports.ts"
 import { createAppServer, type Handler } from "../src/server.ts"
 
 // Only ever talks to a server this file starts on 127.0.0.1 with a random port.
@@ -68,6 +68,36 @@ describe("notice on every response (RPT-REQ-016)", () => {
     bodies.push(await (await post("/districts/atlantis/reports", report(9))).json()) // 404
     bodies.push(await (await post("/districts/lat-phrao/reports", report(9))).json()) // 429
     for (const body of bodies) expect(body).toMatchObject({ notice: NOTICE })
+  })
+})
+
+describe("body size limit (RPT-REQ-014)", () => {
+  it("AC1 / RPT-REQ-016 AC2: 2049 bytes is 413 with notice, and is not parsed", async () => {
+    let called = false
+    const base = await start((method, path, body, ctx) => {
+      called = true
+      return handle(method, path, body, ctx)
+    })
+    // Invalid JSON on purpose: a 400 "invalid JSON" here would mean it was parsed.
+    const res = await fetch(`${base}/districts/lat-phrao/reports`, { method: "POST", body: "{" + "x".repeat(MAX_BODY_BYTES) })
+    expect(res.status).toBe(413)
+    expect(await res.json()).toEqual({ notice: NOTICE, error: "payload_too_large" })
+    expect(called).toBe(false)
+  })
+
+  it("AC2: a 2048-byte body gets past the size check", async () => {
+    const base = await start(isolated())
+    const body = JSON.stringify({ landmark: "ปากซอย 7", depth: "knee", seenAt: new Date().toISOString() })
+    const padded = body + " ".repeat(MAX_BODY_BYTES - Buffer.byteLength(body))
+    expect(Buffer.byteLength(padded)).toBe(MAX_BODY_BYTES)
+    const res = await fetch(`${base}/districts/lat-phrao/reports`, { method: "POST", body: padded })
+    expect(res.status).toBe(201)
+  })
+
+  it("the server keeps serving after a 413", async () => {
+    const base = await start(isolated())
+    await fetch(`${base}/districts/lat-phrao/reports`, { method: "POST", body: "x".repeat(10 * MAX_BODY_BYTES) }).catch(() => undefined)
+    expect((await fetch(`${base}/districts`)).status).toBe(200)
   })
 })
 

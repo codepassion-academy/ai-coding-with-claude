@@ -9,6 +9,8 @@ export const USER_REPORT_LABEL = "ผู้ใช้รายงาน ยัง
 
 export const MAX_BACKDATE_MS = 3 * 60 * 60 * 1000
 export const DISPLAY_TTL_MS = 6 * 60 * 60 * 1000
+export const MAX_BODY_BYTES = 2048
+export const MAX_ACTIVE_REPORTS = 1000
 export const LANDMARK_MIN = 2
 export const LANDMARK_MAX = 80
 
@@ -182,6 +184,9 @@ export function createReportStore(limiter: RateLimiter = createRateLimiter()): R
         limiter.record(clientKey, now)
         return { ok: true, merged: true, report: existing }
       }
+
+      // Only a brand-new report needs room; merges above still work when full (RPT-REQ-014).
+      if (reports.size >= MAX_ACTIVE_REPORTS) return { ok: false, status: 503, error: "store_full" }
 
       const report: Report = {
         id: randomUUID(),

@@ -25,12 +25,38 @@ npm run lint    # เช็ก type ด้วย tsc
 npm run dev     # เปิด server ที่ http://localhost:3000
 ```
 
-ลองเรียก
+ลองเรียก (ยิงเฉพาะ `localhost` เท่านั้น)
 
 ```bash
 curl localhost:3000/districts
 curl localhost:3000/districts/lat-phrao
+
+# ส่งรายงานทดสอบ seenAt ต้องเป็นเวลาในช่วง 3 ชั่วโมงที่ผ่านมา มี Z หรือ +07:00
+curl -X POST localhost:3000/districts/lat-phrao/reports \
+  -H 'content-type: application/json' \
+  -d "{\"landmark\":\"ปากซอยลาดพร้าว 71\",\"depth\":\"knee\",\"seenAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 ```
+
+ส่งข้อความเดิมซ้ำจะได้ `200` และ `merged: true`, ส่งเกิน 5 ครั้งใน 1 ชั่วโมงจะได้ `429` พร้อม `Retry-After`,
+ใส่เบอร์โทรในจุดสังเกตจะถูกเก็บเป็น `***`
+
+## หน้าเว็บแผนที่
+
+เปิด <http://localhost:3000> หลัง `npm run dev` จะเห็นแผนที่ หมุดจุดที่มีคนรายงาน สถานีวัด รายการจุด และปุ่ม **แจ้งจุดน้ำท่วม**
+
+- ตัวแผนที่ใช้ MapLibre GL JS กับไฟล์ PMTiles ที่ host เอง (ดู [ADR 0001](docs/adr/0001-maplibre-pmtiles-basemap.md))
+  โหลด MapLibre จาก unpkg แบบปักเวอร์ชันและมี `integrity` จึงไม่ต้อง `npm install` เพิ่ม
+- **ตำแหน่งหมุดเป็นค่าประมาณจากเขต** API ไม่เก็บพิกัดของผู้รายงาน (spec §5, RPT-REQ-013)
+- ไฟล์แผนที่พื้นหลังไม่อยู่ใน git ถ้ายังไม่มี หน้าเว็บยังแสดงหมุดบนพื้นเรียบได้ อยากได้ถนนและชื่อสถานที่ให้สร้างไฟล์เอง:
+
+```bash
+# ติดตั้ง pmtiles CLI: https://docs.protomaps.com/pmtiles/cli
+# ดูชื่อไฟล์ build ล่าสุดที่ https://maps.protomaps.com/builds/ แล้วแทน YYYYMMDD
+pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/bangkok.pmtiles \
+  --bbox=100.30,13.50,100.95,14.05 --maxzoom=15
+```
+
+คำสั่งนี้ดึงเฉพาะส่วนกรุงเทพฯ ผ่าน range request ไม่ได้โหลดทั้งโลก ข้อมูลแผนที่ © OpenStreetMap contributors
 
 ## มีอะไรใน repo
 
@@ -41,7 +67,12 @@ curl localhost:3000/districts/lat-phrao
 | `data/stations.json` | ระดับน้ำสมมติที่บันทึกไว้ ไม่ใช่ค่าจริง |
 | `src/time.ts` | แสดงเวลาเป็นเวลากรุงเทพฯ |
 | `src/app.ts` | routing ของ API แยกจาก `node:http` เพื่อให้ test ง่าย |
+| `src/reports.ts` | รายงานจากคนในพื้นที่: ตรวจข้อมูล ปิดเบอร์โทร รวมรายงานซ้ำ หมดอายุ |
+| `src/rate-limit.ts` | จำกัด 5 รายงานต่อชั่วโมงต่อ client |
+| `src/read-body.ts` | อ่าน body ไม่เกิน 2048 byte |
+| `src/static.ts` | เสิร์ฟหน้าเว็บแผนที่และไฟล์ tiles |
 | `src/server.ts` | HTTP server |
+| `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`) |
 | `tests/` | test ด้วย vitest |
 
 กติกาที่ใช้ทั้ง repo
