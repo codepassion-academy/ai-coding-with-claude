@@ -4,7 +4,8 @@
 
 Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แต่ยังไม่มีโค้ดของฟีเจอร์นี้เลย (`src/` มีแค่ `app.ts`, `server.ts`, `districts.ts`, `stations.ts`, `time.ts`) คืนนี้ทำแค่เส้นทางที่บางที่สุดให้วิ่งครบทุกชั้น (HTTP → `handle` → logic → `ReportStore` → ไฟล์ → test) แล้วเติมกติกาหลักของการรับและแสดงรายงาน ส่วนผู้ดูแลระบบ หน้าเว็บ และ log อยู่ใต้ Later
 
-เมื่ออนุมัติแล้ว บันทึกแผนนี้เป็น `docs/plans/flood-reports.md` ก่อนเริ่มขั้นที่ 1 (CLAUDE.md ระบุว่าแผนอยู่ที่นั่น)
+- ที่มา: `docs/specs/flood-reports.md`
+- วันที่เขียน: 2026-09-30
 
 กติกาที่ใช้ทุกขั้น
 
