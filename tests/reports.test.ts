@@ -109,10 +109,10 @@ describe("maskPersonalData (RPT-REQ-005)", () => {
     expect(maskPersonalData("no. 45 Soi 7")).toBe("no. 45 Soi 7")
   })
 
-  it("known limitation: house rule runs first, so 'บ้าน' + spaced phone leaves the last 7 digits", () => {
-    // Spec order is house number, then phone. "บ้าน 081" is eaten as a house number and the
-    // remaining "234 5678" is under 9 digits. Pinned so the trade-off is visible (flagged to Save).
-    expect(maskPersonalData("บ้าน 081 234 5678")).toBe("*** 234 5678")
+  it("E30: phones are masked before house numbers, so 'บ้าน' + a spaced phone leaves no digits", () => {
+    expect(maskPersonalData("บ้าน 081 234 5678")).toBe("บ้าน ***")
+    expect(maskPersonalData("บ้าน 081.234.5678")).toBe("บ้าน ***")
+    expect(maskPersonalData("บ้านเลขที่ 45/12 โทร 081 234 5678")).toBe("*** โทร ***")
   })
 })
 
