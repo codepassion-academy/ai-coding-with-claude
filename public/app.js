@@ -35,7 +35,11 @@
     demo: Boolean(DEMO) && new URLSearchParams(location.search).has("demo"),
     tab: L.tabFromHash(location.hash),
     // Real เขื่อน as reference points (public/data/dams.geojson), loaded once.
-    dams: []
+    dams: [],
+    // The สถานการณ์จำลอง: off until the viewer opens it, loaded on first use, scrubbed by T+hours.
+    scenario: null,
+    scenarioOn: false,
+    t: 0
   }
   const pins = new Map()
   let map = null
@@ -257,7 +261,7 @@
       const b = el("button", "pin pin-dam")
       b.type = "button"
       b.append(icon(ICON_DAM))
-      const popupText = L.damPopup(properties)
+      const popupText = L.damPopup(properties, releaseOf(properties.id))
       b.setAttribute("aria-label", popupText.title)
       b.addEventListener("click", (e) => {
         e.stopPropagation()
@@ -267,6 +271,104 @@
       const marker = new maplibregl.Marker({ element: b, anchor: "center" }).setLngLat(geometry.coordinates).addTo(map)
       pins.set(`dam:${properties.id}`, { marker, el: b })
     }
+  }
+
+  /** The dam's release at the current T, only while the สถานการณ์จำลอง is on; otherwise none (safety rule 4). */
+  function releaseOf(damId) {
+    if (!state.scenarioOn || !state.scenario) return undefined
+    return L.scenarioStep(state.scenario, state.t).releases.find((r) => r.dam === damId)
+  }
+
+  const SCENARIO_LAYERS = ["scenario-banner", "scenario-reached", "scenario-line", "scenario-areas"]
+  const SCENARIO_SOURCES = ["scenario-banner", "scenario-reached", "scenario-line", "scenario-areas"]
+  const DEPTH_VAR = { ankle: "--ankle", knee: "--knee", waist: "--waist" }
+
+  const featureCollection = (features) => ({ type: "FeatureCollection", features })
+
+  /** Water path, reached stretch, flood areas and the on-canvas banner, on the north tab with the scenario on. */
+  function syncScenarioLayers() {
+    if (!map || !styleReady) return
+    for (const id of SCENARIO_LAYERS) if (map.getLayer(id)) map.removeLayer(id)
+    for (const id of SCENARIO_SOURCES) if (map.getSource(id)) map.removeSource(id)
+    if (state.tab !== "north" || !state.scenarioOn || !state.scenario) return
+
+    const step = L.scenarioStep(state.scenario, state.t)
+    const line = state.scenario.flowLine
+    const areas = step.areas.map((a) => ({
+      type: "Feature",
+      properties: { depthLevel: a.depthLevel },
+      geometry: { type: "Polygon", coordinates: [L.circleRing(a.centre, a.radiusKm)] }
+    }))
+    map.addSource("scenario-areas", { type: "geojson", data: featureCollection(areas) })
+    map.addSource("scenario-line", { type: "geojson", data: { type: "Feature", properties: {}, geometry: line } })
+    map.addSource("scenario-reached", {
+      type: "geojson",
+      data: { type: "Feature", properties: {}, geometry: { type: "LineString", coordinates: L.lineUpToKm(line, step.frontKm) } }
+    })
+    map.addSource("scenario-banner", { type: "geojson", data: featureCollection(bannerNow()) })
+
+    map.addLayer({
+      id: "scenario-areas",
+      type: "fill",
+      source: "scenario-areas",
+      paint: {
+        "fill-color": ["match", ["get", "depthLevel"], ...Object.entries(DEPTH_VAR).flatMap(([k, v]) => [k, cssVar(v)]), cssVar("--knee")],
+        "fill-opacity": ["match", ["get", "depthLevel"], "ankle", 0.35, "knee", 0.5, 0.65]
+      }
+    })
+    map.addLayer({ id: "scenario-line", type: "line", source: "scenario-line", paint: { "line-color": cssVar("--accent"), "line-width": 2, "line-opacity": 0.35, "line-dasharray": [2, 2] } })
+    map.addLayer({ id: "scenario-reached", type: "line", source: "scenario-reached", paint: { "line-color": cssVar("--accent"), "line-width": 4 } })
+    map.addLayer({
+      id: "scenario-banner",
+      type: "symbol",
+      source: "scenario-banner",
+      layout: {
+        "text-field": ["get", "text"],
+        "text-font": ["Noto Sans Medium"],
+        "text-size": 20,
+        "text-rotate": -18,
+        "text-allow-overlap": true,
+        "text-ignore-placement": true
+      },
+      paint: { "text-color": cssVar("--notice-fg"), "text-opacity": 0.45, "text-halo-color": cssVar("--land"), "text-halo-width": 1.5 }
+    })
+  }
+
+  /** Banner points for what is on screen now, so the label is in frame however far the viewer pans or zooms. */
+  function bannerNow() {
+    const b = map.getBounds()
+    return L.bannerFeatures([[b.getWest(), b.getSouth()], [b.getEast(), b.getNorth()]], state.scenario.label, state.scenarioOn)
+  }
+
+  function renderScenarioPanel() {
+    const button = $("scenario-toggle")
+    button.setAttribute("aria-pressed", String(state.scenarioOn))
+    $("scenario-panel").hidden = !state.scenarioOn || !state.scenario
+    if (!state.scenarioOn || !state.scenario) return
+    const step = L.scenarioStep(state.scenario, state.t)
+    const slider = $("scenario-t")
+    slider.max = String(state.scenario.maxT)
+    slider.step = String(state.scenario.stepT)
+    slider.value = String(step.t)
+    $("scenario-t-out").textContent = L.formatT(step.t)
+    $("scenario-label").textContent = state.scenario.label
+    $("scenario-note").textContent = state.scenario.note
+    const nameOf = (id) => state.dams.find((d) => d.properties.id === id)?.properties.nameTh ?? id
+    $("scenario-releases").replaceChildren(
+      ...step.releases.map((r) => {
+        const li = el("li")
+        li.append(el("span", null, `เขื่อน${nameOf(r.dam)}`), el("b", null, L.releaseText(r.m3s)))
+        return li
+      })
+    )
+  }
+
+  async function loadScenario() {
+    if (state.scenario) return
+    // A static file, never the API: the scenario is never sent anywhere (ข้อมูลจำลอง rules).
+    const res = await api("/data/scenarios/chao-phraya.json")
+    if (res.status !== 200 || !res.body) throw new Error("scenario")
+    state.scenario = res.body
   }
 
   function damContent({ title, note, link }) {
@@ -516,6 +618,12 @@
       styleReady = true
       syncFloodLayers()
       syncBasinLayers()
+      syncScenarioLayers()
+    })
+    // Keep the "ข้อมูลจำลอง" banner covering whatever is on screen.
+    map.on("moveend", () => {
+      const source = map.getSource("scenario-banner")
+      if (source && state.scenario) source.setData(featureCollection(bannerNow()))
     })
     if (state.tab === "north") map.fitBounds(BASIN_VIEW, { padding: 24, animate: false })
     // The tiles files are not in git. Without one, that tab shows its pins or outlines on a plain background.
@@ -644,6 +752,28 @@
     if (state.demo && map) map.flyTo(DEMO_VIEW)
   })
   $("report-close").addEventListener("click", () => dialog.close())
+  $("scenario-toggle").addEventListener("click", async () => {
+    state.scenarioOn = !state.scenarioOn
+    if (state.scenarioOn) {
+      try {
+        await loadScenario()
+      } catch {
+        state.scenarioOn = false
+        toast("โหลดสถานการณ์จำลองไม่ได้ ลองใหม่อีกครั้ง")
+      }
+    }
+    closePopup()
+    renderScenarioPanel()
+    syncScenarioLayers()
+    renderPins()
+  })
+  $("scenario-t").addEventListener("input", (e) => {
+    state.t = Number(e.target.value)
+    closePopup()
+    renderScenarioPanel()
+    syncScenarioLayers()
+    renderPins()
+  })
   window.addEventListener("hashchange", () => {
     const tab = L.tabFromHash(location.hash)
     if (tab === state.tab) return
@@ -652,6 +782,7 @@
     closePopup()
     renderTab()
     render()
+    renderScenarioPanel()
   })
   renderTab()
 

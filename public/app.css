@@ -615,3 +615,15 @@ label, legend { font-size: 13px; font-weight: 600; padding: 0; }
 .pin-dam { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: var(--solid); border: 1.5px solid var(--fg); color: var(--fg); }
 .pin-dam svg { width: 16px; height: 16px; }
 .popup .official-link { color: var(--accent); font-weight: 600; font-size: 13px; }
+
+/* สถานการณ์จำลอง (north-water 03) */
+.scenario-head { margin-top: 4px; }
+.scenario-head h3 { margin: 0; }
+.scenario { display: grid; gap: 10px; margin-bottom: 16px; padding: 12px; border: 1px dashed var(--notice-line); border-radius: var(--r-md); background: var(--notice-bg); }
+.scenario-label { margin: 0; color: var(--notice-fg); font-weight: 600; font-size: 13px; }
+.scenario-time { display: flex; justify-content: space-between; color: var(--muted); font-size: 12.5px; }
+.scenario-time output { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+.scenario input[type="range"] { width: 100%; accent-color: var(--accent); }
+.releases { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; }
+.releases li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
+.releases b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }

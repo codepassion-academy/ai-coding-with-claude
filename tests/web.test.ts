@@ -104,6 +104,13 @@ describe("web page (GET /)", () => {
     }
   })
 
+  it("serves the สถานการณ์จำลอง as a static file", async () => {
+    const res = await fetch(`${await start()}/data/scenarios/chao-phraya.json`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get("content-type")).toBe("application/json")
+    expect(((await res.json()) as { label: string }).label).toBe("ข้อมูลจำลอง · ไม่ใช่การพยากรณ์")
+  })
+
   it("serves the page logic script", async () => {
     const res = await fetch(`${await start()}/logic.js`)
     expect(res.status).toBe(200)

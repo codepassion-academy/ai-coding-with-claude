@@ -78,11 +78,143 @@
    * What a เขื่อน popup says. A real dam is a reference point: its name and a link to RID, never a release
    * figure (north-water safety rule 4). Release numbers only ever come from the สถานการณ์จำลอง.
    */
-  const damPopup = (dam) => ({
+  const damPopup = (dam, release) => ({
     title: `เขื่อน${dam.nameTh}`,
-    note: "จุดอ้างอิง ดูปริมาณน้ำและการระบายน้ำจริงที่กรมชลประทาน",
+    note: release
+      ? `${releaseText(release.m3s)} (ข้อมูลจำลอง ไม่ใช่ตัวเลขจริง)`
+      : "จุดอ้างอิง ดูปริมาณน้ำและการระบายน้ำจริงที่กรมชลประทาน",
     link: { href: dam.rid, text: "กรมชลประทาน" }
   })
 
-  window.NAMTUAM_LOGIC = { errorMessage, ageLabel, bangkokIso, mergeReports, inFilter, countByDepth, countByDistrict, place, positionOf, tabFromHash, damPopup }
+  const thousands = (n) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+  /** A made-up release from the สถานการณ์จำลอง, e.g. "ระบาย 3,200 ลบ.ม./วินาที". */
+  const releaseText = (m3s) => `ระบาย ${thousands(m3s)} ลบ.ม./วินาที`
+
+  // Geometry for the สถานการณ์จำลอง (north-water 03, 05). Distances in km on a sphere; good enough at basin scale.
+  const EARTH_KM = 6371.0088
+  const rad = (d) => (d * Math.PI) / 180
+  function haversineKm([lon1, lat1], [lon2, lat2]) {
+    const h = Math.sin(rad(lat2 - lat1) / 2) ** 2 + Math.cos(rad(lat1)) * Math.cos(rad(lat2)) * Math.sin(rad(lon2 - lon1) / 2) ** 2
+    return 2 * EARTH_KM * Math.asin(Math.sqrt(h))
+  }
+
+  /** Length of a GeoJSON LineString in km. */
+  function lineLengthKm(line) {
+    let km = 0
+    for (let i = 1; i < line.coordinates.length; i++) km += haversineKm(line.coordinates[i - 1], line.coordinates[i])
+    return km
+  }
+
+  /**
+   * Nearest point on the line to `point`: how far along the line it is (km from the first vertex), how far off
+   * the line the point is, and the point on the line. Projects each segment in a local equirectangular frame.
+   */
+  function snapToLine(line, point) {
+    const c = line.coordinates
+    let best = { km: 0, offKm: Infinity, point: c[0] }
+    let along = 0
+    for (let i = 1; i < c.length; i++) {
+      const [a, b] = [c[i - 1], c[i]]
+      const k = Math.cos(rad((a[1] + b[1]) / 2))
+      const [ax, ay, bx, by, px, py] = [a[0] * k, a[1], b[0] * k, b[1], point[0] * k, point[1]]
+      const len2 = (bx - ax) ** 2 + (by - ay) ** 2
+      const f = len2 ? Math.max(0, Math.min(1, ((px - ax) * (bx - ax) + (py - ay) * (by - ay)) / len2)) : 0
+      const on = [a[0] + f * (b[0] - a[0]), a[1] + f * (b[1] - a[1])]
+      const offKm = haversineKm(point, on)
+      if (offKm < best.offKm) best = { km: along + haversineKm(a, on), offKm, point: on }
+      along += haversineKm(a, b)
+    }
+    return best
+  }
+
+  /** The part of the line from its start to `km` along it, as coordinates (for the reached stretch of water). */
+  function lineUpToKm(line, km) {
+    const c = line.coordinates
+    const out = [c[0]]
+    let along = 0
+    for (let i = 1; i < c.length; i++) {
+      const seg = haversineKm(c[i - 1], c[i])
+      if (along + seg >= km) {
+        const f = seg ? (km - along) / seg : 0
+        out.push([c[i - 1][0] + f * (c[i][0] - c[i - 1][0]), c[i - 1][1] + f * (c[i][1] - c[i - 1][1])])
+        return out
+      }
+      out.push(c[i])
+      along += seg
+    }
+    return out
+  }
+
+  /** A circle of `radiusKm` around `centre` as a closed GeoJSON ring. */
+  function circleRing([lon, lat], radiusKm, points = 48) {
+    const dLat = radiusKm / 110.574
+    const dLon = radiusKm / (111.32 * Math.cos(rad(lat)))
+    const ring = []
+    for (let i = 0; i <= points; i++) {
+      const a = (2 * Math.PI * (i % points)) / points
+      ring.push([lon + dLon * Math.cos(a), lat + dLat * Math.sin(a)])
+    }
+    return ring
+  }
+
+  /**
+   * The สถานการณ์จำลอง at T+`t` hours: each dam's latest release step, how far the water front has travelled,
+   * and the flood areas it has reached. T is clamped to 0..maxT. There is no clock time anywhere (safety rule 2).
+   */
+  function scenarioStep(scenario, t) {
+    const at = Math.max(0, Math.min(scenario.maxT, Number(t) || 0))
+    const releases = scenario.releases.map(({ dam, steps }) => {
+      const step = steps.filter((s) => s.fromT <= at).at(-1) ?? steps[0]
+      return { dam, m3s: step.m3s }
+    })
+    return {
+      t: at,
+      frontKm: Math.min(scenario.speedKmh * at, lineLengthKm(scenario.flowLine)),
+      releases,
+      areas: scenario.floodAreas.filter((a) => a.fromT <= at)
+    }
+  }
+
+  /** Hours after the release, e.g. "T+18 ชม.". Never a date or a clock time. */
+  const formatT = (t) => `T+${t} ชม.`
+
+  /**
+   * Points that tile the view with the scenario label, drawn as a symbol layer so the "ข้อมูลจำลอง" mark is
+   * part of the map canvas and every screenshot carries it (safety rule 3). Empty when the scenario is off.
+   */
+  function bannerFeatures([[west, south], [east, north]], label, on) {
+    if (!on) return []
+    const features = []
+    const [cols, rows] = [3, 4]
+    for (let i = 0; i < cols; i++) {
+      for (let j = 0; j < rows; j++) {
+        const coordinates = [west + ((i + 0.5) * (east - west)) / cols, south + ((j + 0.5) * (north - south)) / rows]
+        features.push({ type: "Feature", properties: { text: label }, geometry: { type: "Point", coordinates } })
+      }
+    }
+    return features
+  }
+
+  window.NAMTUAM_LOGIC = {
+    errorMessage,
+    ageLabel,
+    bangkokIso,
+    mergeReports,
+    inFilter,
+    countByDepth,
+    countByDistrict,
+    place,
+    positionOf,
+    tabFromHash,
+    damPopup,
+    releaseText,
+    haversineKm,
+    lineLengthKm,
+    snapToLine,
+    lineUpToKm,
+    circleRing,
+    scenarioStep,
+    formatT,
+    bannerFeatures
+  }
 })()
