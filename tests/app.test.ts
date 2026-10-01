@@ -37,6 +37,24 @@ describe("GET /districts/:id", () => {
   })
 })
 
+describe("กึ่งกลางเขต (district centre)", () => {
+  // Bangkok's bounds as the map page uses them: [[west, south], [east, north]].
+  const inBangkok = ([lon, lat]: [number, number]) => lon >= 100.3 && lon <= 100.95 && lat >= 13.5 && lat <= 14.05
+
+  it("gives every district in GET /districts a [lon, lat] centre inside Bangkok", () => {
+    const { districts } = handle("GET", "/districts", undefined, { now }).body as { districts: { centre: [number, number] }[] }
+    for (const d of districts) {
+      expect(d.centre).toHaveLength(2)
+      expect(inBangkok(d.centre)).toBe(true)
+    }
+  })
+
+  it("includes the centre on GET /districts/:id", () => {
+    const res = handle("GET", "/districts/chatuchak", undefined, { now })
+    expect(res.body).toMatchObject({ district: { id: "chatuchak", centre: [100.56, 13.83] } })
+  })
+})
+
 describe("unknown routes", () => {
   it("returns 404", () => {
     expect(handle("GET", "/nope", undefined, { now }).status).toBe(404)

@@ -280,7 +280,7 @@ Sliding-window log ต่อ key เก็บแค่ timestamp (ตัวเ�
 | `POST /districts/:id/reports` | **ใหม่** | `{ landmark, depth, seenAt }` | `201`/`200` `{ notice, merged, report: PublicReport }` |
 | `GET /districts/:id` | **เปลี่ยน (เพิ่ม key)** | – | `{ notice, district, stations, userReports: PublicReport[] }`; `404` ตอนนี้ `{ notice, error }` |
 | route อื่นที่ไม่ตรง | **เปลี่ยน** | – | `404` `{ notice, error: "not found" }` |
-| `GET /districts` | ไม่เปลี่ยน | – | – |
+| `GET /districts` | **เปลี่ยน (เพิ่ม field)** (flood-map) | – | แต่ละเขตมี `centre: [lon, lat]` (กึ่งกลางเขต) ต่อท้าย field เดิม `GET /districts/:id` → `district` ก็มี `centre` เช่นกัน เป็นพิกัดของเขต ไม่ใช่ของผู้รายงาน (REQ-013) |
 
 รหัสความผิดพลาดของ `POST`
 
