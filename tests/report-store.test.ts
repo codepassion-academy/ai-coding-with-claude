@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs"
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
 import { afterEach, beforeEach, describe, expect, it } from "vitest"
@@ -147,6 +147,76 @@ describe("file store", () => {
     expect(existsSync(path)).toBe(false)
     store.add(report())
     expect(JSON.parse(readFileSync(path, "utf8"))).toEqual({ version: 1, reports: [report()] })
+  })
+})
+
+describe("file store: a bad file", () => {
+  it.each([
+    ["not JSON", "this is not json {"],
+    ["an empty file", ""],
+    ["a JSON array", "[]"],
+    ["a missing reports key", JSON.stringify({ version: 1 })],
+    ["an unknown version", JSON.stringify({ version: 2, reports: [] })],
+    ["reports that is not an array", JSON.stringify({ version: 1, reports: "x" })],
+    ["a report that is not an object", JSON.stringify({ version: 1, reports: [null] })],
+    ["a report with the wrong field types", JSON.stringify({ version: 1, reports: [{ ...report(), depthCm: "25" }] })]
+  ])("RPT-REQ-015 AC4 throws an error naming the path for %s and leaves the file as it was", (_name, content) => {
+    const path = join(dir, "reports.json")
+    writeFileSync(path, content)
+    expect(() => createFileReportStore(path)).toThrow(path)
+    expect(readFileSync(path, "utf8")).toBe(content)
+  })
+
+  it("RPT-REQ-015 AC4 does not leave a temp file behind", () => {
+    const path = join(dir, "reports.json")
+    writeFileSync(path, "this is not json {")
+    expect(() => createFileReportStore(path)).toThrow()
+    expect(existsSync(`${path}.tmp`)).toBe(false)
+  })
+})
+
+describe("file store: a failed write", () => {
+  // A directory where the temp file should go makes every write fail, on any platform.
+  const blockWrites = (path: string) => mkdirSync(`${path}.tmp`, { recursive: true })
+  const unblockWrites = (path: string) => rmSync(`${path}.tmp`, { recursive: true, force: true })
+
+  it("RPT-REQ-015 AC5 makes add throw and keeps the report out of all()", () => {
+    const path = join(dir, "reports.json")
+    const store = createFileReportStore(path)
+    blockWrites(path)
+    expect(() => store.add(report())).toThrow()
+    expect(store.all()).toEqual([])
+    expect(existsSync(path)).toBe(false)
+  })
+
+  it("RPT-REQ-015 AC5 keeps the earlier reports and the file as they were", () => {
+    const path = join(dir, "reports.json")
+    const store = createFileReportStore(path)
+    store.add(report({ id: "r-1" }))
+    const before = readFileSync(path, "utf8")
+    blockWrites(path)
+    expect(() => store.add(report({ id: "r-2" }))).toThrow()
+    expect(store.all()).toEqual([report({ id: "r-1" })])
+    expect(readFileSync(path, "utf8")).toBe(before)
+  })
+
+  it("RPT-REQ-015 AC5 saves normally again once writing works", () => {
+    const path = join(dir, "reports.json")
+    const store = createFileReportStore(path)
+    blockWrites(path)
+    expect(() => store.add(report({ id: "r-1" }))).toThrow()
+    unblockWrites(path)
+    store.add(report({ id: "r-2" }))
+    expect(createFileReportStore(path).all()).toEqual([report({ id: "r-2" })])
+  })
+
+  it("RPT-REQ-015 AC5 does not change hiddenAt when setHidden cannot write", () => {
+    const path = join(dir, "reports.json")
+    const store = createFileReportStore(path)
+    store.add(report({ id: "r-1" }))
+    blockWrites(path)
+    expect(() => store.setHidden("r-1", "2026-09-30T12:40:00.000Z")).toThrow()
+    expect(store.all()).toEqual([report({ id: "r-1" })])
   })
 })
 

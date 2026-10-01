@@ -121,7 +121,12 @@ export function createApp(deps: AppDeps): typeof handle {
         reporterHash,
         hiddenAt: null
       }
-      deps.store.add(report)
+      try {
+        deps.store.add(report)
+      } catch {
+        // The store keeps nothing it could not save, so the sender can retry. The cause stays out of the response.
+        return { status: 500, body: { error: "could not save report" } }
+      }
       reportLog.accepted(report.id, districtId)
       return {
         status: 201,

@@ -140,6 +140,57 @@ describe("POST /reports", () => {
   })
 })
 
+describe("POST /reports when saving fails", () => {
+  // A store whose add throws while `failing` is true, like a full disk.
+  function flakyStore() {
+    const inner = createMemoryReportStore()
+    const flaky = {
+      failing: true,
+      store: {
+        ...inner,
+        add: (report: Parameters<typeof inner.add>[0]) => {
+          if (flaky.failing) throw new Error("ENOSPC: no space left on device, write 'var/reports.json.tmp'")
+          inner.add(report)
+        }
+      }
+    }
+    return { flaky, inner }
+  }
+
+  it("RPT-REQ-015 AC5 answers 500 could not save report and keeps the report out of the store", () => {
+    const { flaky, inner } = flakyStore()
+    const app = createApp({ store: flaky.store, ipHashSecret: SECRET })
+    const res = app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    expect(res).toMatchObject({ status: 500, body: { error: "could not save report" } })
+    expect(inner.all()).toEqual([])
+  })
+
+  it("RPT-REQ-015 AC5 does not leak the error message or the file path in the 500 body", () => {
+    const { flaky } = flakyStore()
+    const app = createApp({ store: flaky.store, ipHashSecret: SECRET })
+    const res = app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    expect(res.body).toEqual({ error: "could not save report" })
+  })
+
+  it("RPT-REQ-015 AC5 does not use up the sender's quota (edge case 21)", () => {
+    const { flaky, inner } = flakyStore()
+    const app = createApp({ store: flaky.store, ipHashSecret: SECRET })
+    expect(app("POST", "/reports", validReport, { now: NOW, clientIp: IP }).status).toBe(500)
+    flaky.failing = false
+    for (let i = 0; i < 5; i++) {
+      expect(app("POST", "/reports", validReport, { now: NOW, clientIp: IP }).status).toBe(201)
+    }
+    expect(inner.all()).toHaveLength(5)
+  })
+
+  it("RPT-REQ-015 AC5 does not answer 201 for a report that was not saved", () => {
+    const { flaky } = flakyStore()
+    const app = createApp({ store: flaky.store, ipHashSecret: SECRET })
+    const res = app("POST", "/reports", validReport, { now: NOW, clientIp: IP })
+    expect(res.body).not.toHaveProperty("report")
+  })
+})
+
 describe("POST /reports rate limit", () => {
   const at = (iso: string) => ({ now: new Date(iso), clientIp: IP })
 
