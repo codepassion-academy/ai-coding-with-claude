@@ -63,7 +63,8 @@ function runHandleFlows() {
   if (rejected.status !== 503) throw new Error(`expected 503, got ${rejected.status}`)
   outputs.push(rejected)
 
-  return { outputs, stored: ctx.reports.activeIn("lat-phrao", now) }
+  // The store keys reports by P-code; "lat-phrao" in the URL is the old slug alias for TH1038.
+  return { outputs, stored: ctx.reports.activeIn("TH1038", now) }
 }
 
 async function runServerFlows() {

@@ -1,0 +1,1602 @@
+{
+ "source": {
+  "name": "Thailand - Subnational Administrative Boundaries (COD-AB), Royal Thai Survey Department / OCHA ROAP",
+  "url": "https://data.humdata.org/dataset/cod-ab-tha",
+  "licence": "CC BY-IGO",
+  "validOn": "2022-01-22"
+ },
+ "provinces": [
+  {
+   "pcode": "TH10",
+   "nameTh": "กรุงเทพมหานคร",
+   "nameEn": "Bangkok"
+  },
+  {
+   "pcode": "TH11",
+   "nameTh": "สมุทรปราการ",
+   "nameEn": "Samut Prakan"
+  },
+  {
+   "pcode": "TH12",
+   "nameTh": "นนทบุรี",
+   "nameEn": "Nonthaburi"
+  },
+  {
+   "pcode": "TH13",
+   "nameTh": "ปทุมธานี",
+   "nameEn": "Pathum Thani"
+  },
+  {
+   "pcode": "TH14",
+   "nameTh": "พระนครศรีอยุธยา",
+   "nameEn": "Phra Nakhon Si Ayutthaya"
+  },
+  {
+   "pcode": "TH15",
+   "nameTh": "อ่างทอง",
+   "nameEn": "Ang Thong"
+  },
+  {
+   "pcode": "TH16",
+   "nameTh": "ลพบุรี",
+   "nameEn": "Lop Buri"
+  },
+  {
+   "pcode": "TH17",
+   "nameTh": "สิงห์บุรี",
+   "nameEn": "Sing Buri"
+  },
+  {
+   "pcode": "TH18",
+   "nameTh": "ชัยนาท",
+   "nameEn": "Chai Nat"
+  },
+  {
+   "pcode": "TH19",
+   "nameTh": "สระบุรี",
+   "nameEn": "Saraburi"
+  },
+  {
+   "pcode": "TH60",
+   "nameTh": "นครสวรรค์",
+   "nameEn": "Nakhon Sawan"
+  },
+  {
+   "pcode": "TH61",
+   "nameTh": "อุทัยธานี",
+   "nameEn": "Uthai Thani"
+  }
+ ],
+ "districts": [
+  {
+   "pcode": "TH1001",
+   "nameTh": "พระนคร",
+   "nameEn": "Phra Nakhon",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4969,
+    13.7557
+   ]
+  },
+  {
+   "pcode": "TH1002",
+   "nameTh": "ดุสิต",
+   "nameEn": "Dusit",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5146,
+    13.7765
+   ]
+  },
+  {
+   "pcode": "TH1003",
+   "nameTh": "หนองจอก",
+   "nameEn": "Nong Chok",
+   "provincePcode": "TH10",
+   "centre": [
+    100.8582,
+    13.8423
+   ]
+  },
+  {
+   "pcode": "TH1004",
+   "nameTh": "บางรัก",
+   "nameEn": "Bang Rak",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5262,
+    13.7282
+   ]
+  },
+  {
+   "pcode": "TH1005",
+   "nameTh": "บางเขน",
+   "nameEn": "Bang Khen",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6363,
+    13.8712
+   ]
+  },
+  {
+   "pcode": "TH1006",
+   "nameTh": "บางกะปิ",
+   "nameEn": "Bang Kapi",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6408,
+    13.779
+   ]
+  },
+  {
+   "pcode": "TH1007",
+   "nameTh": "ปทุมวัน",
+   "nameEn": "Pathum Wan",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5337,
+    13.7379
+   ]
+  },
+  {
+   "pcode": "TH1008",
+   "nameTh": "ป้อมปราบศัตรูพ่าย",
+   "nameEn": "Pom Prap Sattru Phai",
+   "provincePcode": "TH10",
+   "centre": [
+    100.511,
+    13.7509
+   ]
+  },
+  {
+   "pcode": "TH1009",
+   "nameTh": "พระโขนง",
+   "nameEn": "Phra Khanong",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6125,
+    13.6924
+   ]
+  },
+  {
+   "pcode": "TH1010",
+   "nameTh": "มีนบุรี",
+   "nameEn": "Min Buri",
+   "provincePcode": "TH10",
+   "centre": [
+    100.7502,
+    13.8111
+   ]
+  },
+  {
+   "pcode": "TH1011",
+   "nameTh": "ลาดกระบัง",
+   "nameEn": "Lat Krabang",
+   "provincePcode": "TH10",
+   "centre": [
+    100.7906,
+    13.7449
+   ]
+  },
+  {
+   "pcode": "TH1012",
+   "nameTh": "ยานนาวา",
+   "nameEn": "Yan Nawa",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5398,
+    13.6938
+   ]
+  },
+  {
+   "pcode": "TH1013",
+   "nameTh": "สัมพันธวงศ์",
+   "nameEn": "Samphanthawong",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5088,
+    13.7381
+   ]
+  },
+  {
+   "pcode": "TH1014",
+   "nameTh": "พญาไท",
+   "nameEn": "Phaya Thai",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5439,
+    13.7802
+   ]
+  },
+  {
+   "pcode": "TH1015",
+   "nameTh": "ธนบุรี",
+   "nameEn": "Thon Buri",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4814,
+    13.7184
+   ]
+  },
+  {
+   "pcode": "TH1016",
+   "nameTh": "บางกอกใหญ่",
+   "nameEn": "Bangkok Yai",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4748,
+    13.7353
+   ]
+  },
+  {
+   "pcode": "TH1017",
+   "nameTh": "ห้วยขวาง",
+   "nameEn": "Huai Khwang",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5834,
+    13.7723
+   ]
+  },
+  {
+   "pcode": "TH1018",
+   "nameTh": "คลองสาน",
+   "nameEn": "Khlong San",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5026,
+    13.7224
+   ]
+  },
+  {
+   "pcode": "TH1019",
+   "nameTh": "ตลิ่งชัน",
+   "nameEn": "Taling Chan",
+   "provincePcode": "TH10",
+   "centre": [
+    100.431,
+    13.7704
+   ]
+  },
+  {
+   "pcode": "TH1020",
+   "nameTh": "บางกอกน้อย",
+   "nameEn": "Bangkok Noi",
+   "provincePcode": "TH10",
+   "centre": [
+    100.471,
+    13.7654
+   ]
+  },
+  {
+   "pcode": "TH1021",
+   "nameTh": "บางขุนเทียน",
+   "nameEn": "Bang Khun Thian",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4159,
+    13.588
+   ]
+  },
+  {
+   "pcode": "TH1022",
+   "nameTh": "ภาษีเจริญ",
+   "nameEn": "Phasi Charoen",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4442,
+    13.7178
+   ]
+  },
+  {
+   "pcode": "TH1023",
+   "nameTh": "หนองแขม",
+   "nameEn": "Nong Khaem",
+   "provincePcode": "TH10",
+   "centre": [
+    100.3553,
+    13.6961
+   ]
+  },
+  {
+   "pcode": "TH1024",
+   "nameTh": "ราษฎร์บูรณะ",
+   "nameEn": "Rat Burana",
+   "provincePcode": "TH10",
+   "centre": [
+    100.503,
+    13.6741
+   ]
+  },
+  {
+   "pcode": "TH1025",
+   "nameTh": "บางพลัด",
+   "nameEn": "Bang Phlat",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4873,
+    13.7876
+   ]
+  },
+  {
+   "pcode": "TH1026",
+   "nameTh": "ดินแดง",
+   "nameEn": "Din Daeng",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5649,
+    13.7777
+   ]
+  },
+  {
+   "pcode": "TH1027",
+   "nameTh": "บึงกุ่ม",
+   "nameEn": "Bueng Kum",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6495,
+    13.809
+   ]
+  },
+  {
+   "pcode": "TH1028",
+   "nameTh": "สาทร",
+   "nameEn": "Sathon",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5271,
+    13.7137
+   ]
+  },
+  {
+   "pcode": "TH1029",
+   "nameTh": "บางซื่อ",
+   "nameEn": "Bang Sue",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5237,
+    13.8237
+   ]
+  },
+  {
+   "pcode": "TH1030",
+   "nameTh": "จตุจักร",
+   "nameEn": "Chatuchak",
+   "provincePcode": "TH10",
+   "centre": [
+    100.564,
+    13.8267
+   ]
+  },
+  {
+   "pcode": "TH1031",
+   "nameTh": "บางคอแหลม",
+   "nameEn": "Bang Kho Laem",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5105,
+    13.6974
+   ]
+  },
+  {
+   "pcode": "TH1032",
+   "nameTh": "ประเวศ",
+   "nameEn": "Prawet",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6732,
+    13.6971
+   ]
+  },
+  {
+   "pcode": "TH1033",
+   "nameTh": "คลองเตย",
+   "nameEn": "Khlong Toei",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5694,
+    13.7195
+   ]
+  },
+  {
+   "pcode": "TH1034",
+   "nameTh": "สวนหลวง",
+   "nameEn": "Suan Luang",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6274,
+    13.7255
+   ]
+  },
+  {
+   "pcode": "TH1035",
+   "nameTh": "จอมทอง",
+   "nameEn": "Chom Thong",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4648,
+    13.6868
+   ]
+  },
+  {
+   "pcode": "TH1036",
+   "nameTh": "ดอนเมือง",
+   "nameEn": "Don Mueang",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5921,
+    13.9211
+   ]
+  },
+  {
+   "pcode": "TH1037",
+   "nameTh": "ราชเทวี",
+   "nameEn": "Ratchathewi",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5341,
+    13.761
+   ]
+  },
+  {
+   "pcode": "TH1038",
+   "nameTh": "ลาดพร้าว",
+   "nameEn": "Lat Phrao",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6081,
+    13.822
+   ]
+  },
+  {
+   "pcode": "TH1039",
+   "nameTh": "วัฒนา",
+   "nameEn": "Vadhana",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5904,
+    13.7266
+   ]
+  },
+  {
+   "pcode": "TH1040",
+   "nameTh": "บางแค",
+   "nameEn": "Bang Khae",
+   "provincePcode": "TH10",
+   "centre": [
+    100.3991,
+    13.7109
+   ]
+  },
+  {
+   "pcode": "TH1041",
+   "nameTh": "หลักสี่",
+   "nameEn": "Lak Si",
+   "provincePcode": "TH10",
+   "centre": [
+    100.5705,
+    13.882
+   ]
+  },
+  {
+   "pcode": "TH1042",
+   "nameTh": "สายไหม",
+   "nameEn": "Sai Mai",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6511,
+    13.9123
+   ]
+  },
+  {
+   "pcode": "TH1043",
+   "nameTh": "คันนายาว",
+   "nameEn": "Khan Na Yao",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6789,
+    13.8192
+   ]
+  },
+  {
+   "pcode": "TH1044",
+   "nameTh": "สะพานสูง",
+   "nameEn": "Saphan Sung",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6908,
+    13.7654
+   ]
+  },
+  {
+   "pcode": "TH1045",
+   "nameTh": "วังทองหลาง",
+   "nameEn": "Wang Thonglang",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6116,
+    13.7769
+   ]
+  },
+  {
+   "pcode": "TH1046",
+   "nameTh": "คลองสามวา",
+   "nameEn": "Khlong Sam Wa",
+   "provincePcode": "TH10",
+   "centre": [
+    100.7371,
+    13.8736
+   ]
+  },
+  {
+   "pcode": "TH1047",
+   "nameTh": "บางนา",
+   "nameEn": "Bang Na",
+   "provincePcode": "TH10",
+   "centre": [
+    100.6191,
+    13.6665
+   ]
+  },
+  {
+   "pcode": "TH1048",
+   "nameTh": "ทวีวัฒนา",
+   "nameEn": "Thawi Watthana",
+   "provincePcode": "TH10",
+   "centre": [
+    100.3692,
+    13.7703
+   ]
+  },
+  {
+   "pcode": "TH1049",
+   "nameTh": "ทุ่งครุ",
+   "nameEn": "Thung Khru",
+   "provincePcode": "TH10",
+   "centre": [
+    100.4935,
+    13.6246
+   ]
+  },
+  {
+   "pcode": "TH1050",
+   "nameTh": "บางบอน",
+   "nameEn": "Bang Bon",
+   "provincePcode": "TH10",
+   "centre": [
+    100.3845,
+    13.6567
+   ]
+  },
+  {
+   "pcode": "TH1101",
+   "nameTh": "เมืองสมุทรปราการ",
+   "nameEn": "Mueang Samut Prakan",
+   "provincePcode": "TH11",
+   "centre": [
+    100.6401,
+    13.5772
+   ]
+  },
+  {
+   "pcode": "TH1102",
+   "nameTh": "บางบ่อ",
+   "nameEn": "Bang Bo",
+   "provincePcode": "TH11",
+   "centre": [
+    100.8702,
+    13.5876
+   ]
+  },
+  {
+   "pcode": "TH1103",
+   "nameTh": "บางพลี",
+   "nameEn": "Bang Phli",
+   "provincePcode": "TH11",
+   "centre": [
+    100.7246,
+    13.6148
+   ]
+  },
+  {
+   "pcode": "TH1104",
+   "nameTh": "พระประแดง",
+   "nameEn": "Phra Pradaeng",
+   "provincePcode": "TH11",
+   "centre": [
+    100.5549,
+    13.6525
+   ]
+  },
+  {
+   "pcode": "TH1105",
+   "nameTh": "พระสมุทรเจดีย์",
+   "nameEn": "Phra Samut Chedi",
+   "provincePcode": "TH11",
+   "centre": [
+    100.5109,
+    13.5588
+   ]
+  },
+  {
+   "pcode": "TH1106",
+   "nameTh": "บางเสาธง",
+   "nameEn": "Bang Sao Thong",
+   "provincePcode": "TH11",
+   "centre": [
+    100.8133,
+    13.6328
+   ]
+  },
+  {
+   "pcode": "TH1201",
+   "nameTh": "เมืองนนทบุรี",
+   "nameEn": "Mueang Nonthaburi",
+   "provincePcode": "TH12",
+   "centre": [
+    100.4931,
+    13.8524
+   ]
+  },
+  {
+   "pcode": "TH1202",
+   "nameTh": "บางกรวย",
+   "nameEn": "Bang Kruai",
+   "provincePcode": "TH12",
+   "centre": [
+    100.4065,
+    13.8128
+   ]
+  },
+  {
+   "pcode": "TH1203",
+   "nameTh": "บางใหญ่",
+   "nameEn": "Bang Yai",
+   "provincePcode": "TH12",
+   "centre": [
+    100.3633,
+    13.8636
+   ]
+  },
+  {
+   "pcode": "TH1204",
+   "nameTh": "บางบัวทอง",
+   "nameEn": "Bang Bua Thong",
+   "provincePcode": "TH12",
+   "centre": [
+    100.3923,
+    13.9318
+   ]
+  },
+  {
+   "pcode": "TH1205",
+   "nameTh": "ไทรน้อย",
+   "nameEn": "Sai Noi",
+   "provincePcode": "TH12",
+   "centre": [
+    100.3084,
+    14.0047
+   ]
+  },
+  {
+   "pcode": "TH1206",
+   "nameTh": "ปากเกร็ด",
+   "nameEn": "Pak Kret",
+   "provincePcode": "TH12",
+   "centre": [
+    100.5041,
+    13.9358
+   ]
+  },
+  {
+   "pcode": "TH1301",
+   "nameTh": "เมืองปทุมธานี",
+   "nameEn": "Mueang Pathum Thani",
+   "provincePcode": "TH13",
+   "centre": [
+    100.5283,
+    14.0048
+   ]
+  },
+  {
+   "pcode": "TH1302",
+   "nameTh": "คลองหลวง",
+   "nameEn": "Khlong Luang",
+   "provincePcode": "TH13",
+   "centre": [
+    100.6703,
+    14.1031
+   ]
+  },
+  {
+   "pcode": "TH1303",
+   "nameTh": "ธัญบุรี",
+   "nameEn": "Thanyaburi",
+   "provincePcode": "TH13",
+   "centre": [
+    100.7722,
+    14.0326
+   ]
+  },
+  {
+   "pcode": "TH1304",
+   "nameTh": "หนองเสือ",
+   "nameEn": "Nong Suea",
+   "provincePcode": "TH13",
+   "centre": [
+    100.8345,
+    14.1605
+   ]
+  },
+  {
+   "pcode": "TH1305",
+   "nameTh": "ลาดหลุมแก้ว",
+   "nameEn": "Lat Lum Kaeo",
+   "provincePcode": "TH13",
+   "centre": [
+    100.4144,
+    14.0412
+   ]
+  },
+  {
+   "pcode": "TH1306",
+   "nameTh": "ลำลูกกา",
+   "nameEn": "Lam Luk Ka",
+   "provincePcode": "TH13",
+   "centre": [
+    100.8076,
+    13.9924
+   ]
+  },
+  {
+   "pcode": "TH1307",
+   "nameTh": "สามโคก",
+   "nameEn": "Sam Khok",
+   "provincePcode": "TH13",
+   "centre": [
+    100.5274,
+    14.0804
+   ]
+  },
+  {
+   "pcode": "TH1401",
+   "nameTh": "พระนครศรีอยุธยา",
+   "nameEn": "Phra Nakhon Si Ayutthaya",
+   "provincePcode": "TH14",
+   "centre": [
+    100.5559,
+    14.3434
+   ]
+  },
+  {
+   "pcode": "TH1402",
+   "nameTh": "ท่าเรือ",
+   "nameEn": "Tha Ruea",
+   "provincePcode": "TH14",
+   "centre": [
+    100.698,
+    14.546
+   ]
+  },
+  {
+   "pcode": "TH1403",
+   "nameTh": "นครหลวง",
+   "nameEn": "Nakhon Luang",
+   "provincePcode": "TH14",
+   "centre": [
+    100.6266,
+    14.4738
+   ]
+  },
+  {
+   "pcode": "TH1404",
+   "nameTh": "บางไทร",
+   "nameEn": "Bang Sai",
+   "provincePcode": "TH14",
+   "centre": [
+    100.4752,
+    14.2205
+   ]
+  },
+  {
+   "pcode": "TH1405",
+   "nameTh": "บางบาล",
+   "nameEn": "Bang Ban",
+   "provincePcode": "TH14",
+   "centre": [
+    100.4606,
+    14.3838
+   ]
+  },
+  {
+   "pcode": "TH1406",
+   "nameTh": "บางปะอิน",
+   "nameEn": "Bang Pa-In",
+   "provincePcode": "TH14",
+   "centre": [
+    100.5852,
+    14.226
+   ]
+  },
+  {
+   "pcode": "TH1407",
+   "nameTh": "บางปะหัน",
+   "nameEn": "Bang Pahan",
+   "provincePcode": "TH14",
+   "centre": [
+    100.5347,
+    14.478
+   ]
+  },
+  {
+   "pcode": "TH1408",
+   "nameTh": "ผักไห่",
+   "nameEn": "Phak Hai",
+   "provincePcode": "TH14",
+   "centre": [
+    100.333,
+    14.4537
+   ]
+  },
+  {
+   "pcode": "TH1409",
+   "nameTh": "ภาชี",
+   "nameEn": "Phachi",
+   "provincePcode": "TH14",
+   "centre": [
+    100.7112,
+    14.4331
+   ]
+  },
+  {
+   "pcode": "TH1410",
+   "nameTh": "ลาดบัวหลวง",
+   "nameEn": "Lat Bua Luang",
+   "provincePcode": "TH14",
+   "centre": [
+    100.3529,
+    14.1702
+   ]
+  },
+  {
+   "pcode": "TH1411",
+   "nameTh": "วังน้อย",
+   "nameEn": "Wang Noi",
+   "provincePcode": "TH14",
+   "centre": [
+    100.7266,
+    14.2363
+   ]
+  },
+  {
+   "pcode": "TH1412",
+   "nameTh": "เสนา",
+   "nameEn": "Sena",
+   "provincePcode": "TH14",
+   "centre": [
+    100.3885,
+    14.3078
+   ]
+  },
+  {
+   "pcode": "TH1413",
+   "nameTh": "บางซ้าย",
+   "nameEn": "Bang Sai",
+   "provincePcode": "TH14",
+   "centre": [
+    100.3013,
+    14.3046
+   ]
+  },
+  {
+   "pcode": "TH1414",
+   "nameTh": "อุทัย",
+   "nameEn": "Uthai",
+   "provincePcode": "TH14",
+   "centre": [
+    100.6976,
+    14.3571
+   ]
+  },
+  {
+   "pcode": "TH1415",
+   "nameTh": "มหาราช",
+   "nameEn": "Maha Rat",
+   "provincePcode": "TH14",
+   "centre": [
+    100.5416,
+    14.5678
+   ]
+  },
+  {
+   "pcode": "TH1416",
+   "nameTh": "บ้านแพรก",
+   "nameEn": "Ban Phraek",
+   "provincePcode": "TH14",
+   "centre": [
+    100.5475,
+    14.6466
+   ]
+  },
+  {
+   "pcode": "TH1501",
+   "nameTh": "เมืองอ่างทอง",
+   "nameEn": "Mueang Ang Thong",
+   "provincePcode": "TH15",
+   "centre": [
+    100.4412,
+    14.575
+   ]
+  },
+  {
+   "pcode": "TH1502",
+   "nameTh": "ไชโย",
+   "nameEn": "Chaiyo",
+   "provincePcode": "TH15",
+   "centre": [
+    100.4628,
+    14.6731
+   ]
+  },
+  {
+   "pcode": "TH1503",
+   "nameTh": "ป่าโมก",
+   "nameEn": "Pa Mok",
+   "provincePcode": "TH15",
+   "centre": [
+    100.4568,
+    14.4896
+   ]
+  },
+  {
+   "pcode": "TH1504",
+   "nameTh": "โพธิ์ทอง",
+   "nameEn": "Pho Thong",
+   "provincePcode": "TH15",
+   "centre": [
+    100.3263,
+    14.6808
+   ]
+  },
+  {
+   "pcode": "TH1505",
+   "nameTh": "แสวงหา",
+   "nameEn": "Sawaeng Ha",
+   "provincePcode": "TH15",
+   "centre": [
+    100.292,
+    14.749
+   ]
+  },
+  {
+   "pcode": "TH1506",
+   "nameTh": "วิเศษชัยชาญ",
+   "nameEn": "Wiset Chai Chan",
+   "provincePcode": "TH15",
+   "centre": [
+    100.33,
+    14.5711
+   ]
+  },
+  {
+   "pcode": "TH1507",
+   "nameTh": "สามโก้",
+   "nameEn": "Samko",
+   "provincePcode": "TH15",
+   "centre": [
+    100.2632,
+    14.6003
+   ]
+  },
+  {
+   "pcode": "TH1601",
+   "nameTh": "เมืองลพบุรี",
+   "nameEn": "Mueang Lop Buri",
+   "provincePcode": "TH16",
+   "centre": [
+    100.6997,
+    14.8043
+   ]
+  },
+  {
+   "pcode": "TH1602",
+   "nameTh": "พัฒนานิคม",
+   "nameEn": "Phatthana Nikhom",
+   "provincePcode": "TH16",
+   "centre": [
+    100.9875,
+    14.8997
+   ]
+  },
+  {
+   "pcode": "TH1603",
+   "nameTh": "โคกสำโรง",
+   "nameEn": "Khok Samrong",
+   "provincePcode": "TH16",
+   "centre": [
+    100.7786,
+    15.0556
+   ]
+  },
+  {
+   "pcode": "TH1604",
+   "nameTh": "ชัยบาดาล",
+   "nameEn": "Chai Badan",
+   "provincePcode": "TH16",
+   "centre": [
+    101.1519,
+    15.2013
+   ]
+  },
+  {
+   "pcode": "TH1605",
+   "nameTh": "ท่าวุ้ง",
+   "nameEn": "Tha Wung",
+   "provincePcode": "TH16",
+   "centre": [
+    100.5241,
+    14.8061
+   ]
+  },
+  {
+   "pcode": "TH1606",
+   "nameTh": "บ้านหมี่",
+   "nameEn": "Ban Mi",
+   "provincePcode": "TH16",
+   "centre": [
+    100.5434,
+    15.0793
+   ]
+  },
+  {
+   "pcode": "TH1607",
+   "nameTh": "ท่าหลวง",
+   "nameEn": "Tha Luang",
+   "provincePcode": "TH16",
+   "centre": [
+    101.1842,
+    15.0695
+   ]
+  },
+  {
+   "pcode": "TH1608",
+   "nameTh": "สระโบสถ์",
+   "nameEn": "Sa Bot",
+   "provincePcode": "TH16",
+   "centre": [
+    100.8819,
+    15.2361
+   ]
+  },
+  {
+   "pcode": "TH1609",
+   "nameTh": "โคกเจริญ",
+   "nameEn": "Khok Charoen",
+   "provincePcode": "TH16",
+   "centre": [
+    100.8183,
+    15.427
+   ]
+  },
+  {
+   "pcode": "TH1610",
+   "nameTh": "ลำสนธิ",
+   "nameEn": "Lam Sonthi",
+   "provincePcode": "TH16",
+   "centre": [
+    101.3405,
+    15.4003
+   ]
+  },
+  {
+   "pcode": "TH1611",
+   "nameTh": "หนองม่วง",
+   "nameEn": "Nong Muang",
+   "provincePcode": "TH16",
+   "centre": [
+    100.7111,
+    15.2956
+   ]
+  },
+  {
+   "pcode": "TH1701",
+   "nameTh": "เมืองสิงห์บุรี",
+   "nameEn": "Mueang Sing Buri",
+   "provincePcode": "TH17",
+   "centre": [
+    100.3816,
+    14.9061
+   ]
+  },
+  {
+   "pcode": "TH1702",
+   "nameTh": "บางระจัน",
+   "nameEn": "Bang Rachan",
+   "provincePcode": "TH17",
+   "centre": [
+    100.2785,
+    14.8909
+   ]
+  },
+  {
+   "pcode": "TH1703",
+   "nameTh": "ค่ายบางระจัน",
+   "nameEn": "Khai Bang Rachan",
+   "provincePcode": "TH17",
+   "centre": [
+    100.34,
+    14.8259
+   ]
+  },
+  {
+   "pcode": "TH1704",
+   "nameTh": "พรหมบุรี",
+   "nameEn": "Phrom Buri",
+   "provincePcode": "TH17",
+   "centre": [
+    100.4456,
+    14.7893
+   ]
+  },
+  {
+   "pcode": "TH1705",
+   "nameTh": "ท่าช้าง",
+   "nameEn": "Tha Chang",
+   "provincePcode": "TH17",
+   "centre": [
+    100.387,
+    14.7799
+   ]
+  },
+  {
+   "pcode": "TH1706",
+   "nameTh": "อินทร์บุรี",
+   "nameEn": "In Buri",
+   "provincePcode": "TH17",
+   "centre": [
+    100.3467,
+    15.0289
+   ]
+  },
+  {
+   "pcode": "TH1801",
+   "nameTh": "เมืองชัยนาท",
+   "nameEn": "Mueang Chai Nat",
+   "provincePcode": "TH18",
+   "centre": [
+    100.1147,
+    15.184
+   ]
+  },
+  {
+   "pcode": "TH1802",
+   "nameTh": "มโนรมย์",
+   "nameEn": "Manorom",
+   "provincePcode": "TH18",
+   "centre": [
+    100.1797,
+    15.3306
+   ]
+  },
+  {
+   "pcode": "TH1803",
+   "nameTh": "วัดสิงห์",
+   "nameEn": "Wat Sing",
+   "provincePcode": "TH18",
+   "centre": [
+    99.9952,
+    15.2204
+   ]
+  },
+  {
+   "pcode": "TH1804",
+   "nameTh": "สรรพยา",
+   "nameEn": "Sapphaya",
+   "provincePcode": "TH18",
+   "centre": [
+    100.2572,
+    15.1446
+   ]
+  },
+  {
+   "pcode": "TH1805",
+   "nameTh": "สรรคบุรี",
+   "nameEn": "Sankhaburi",
+   "provincePcode": "TH18",
+   "centre": [
+    100.1622,
+    15.0209
+   ]
+  },
+  {
+   "pcode": "TH1806",
+   "nameTh": "หันคา",
+   "nameEn": "Hankha",
+   "provincePcode": "TH18",
+   "centre": [
+    99.9678,
+    15.0322
+   ]
+  },
+  {
+   "pcode": "TH1807",
+   "nameTh": "หนองมะโมง",
+   "nameEn": "Nong Mamong",
+   "provincePcode": "TH18",
+   "centre": [
+    99.8289,
+    15.2297
+   ]
+  },
+  {
+   "pcode": "TH1808",
+   "nameTh": "เนินขาม",
+   "nameEn": "Noen Kham",
+   "provincePcode": "TH18",
+   "centre": [
+    99.8169,
+    15.0236
+   ]
+  },
+  {
+   "pcode": "TH1901",
+   "nameTh": "เมืองสระบุรี",
+   "nameEn": "Mueang Saraburi",
+   "provincePcode": "TH19",
+   "centre": [
+    100.9204,
+    14.4983
+   ]
+  },
+  {
+   "pcode": "TH1902",
+   "nameTh": "แก่งคอย",
+   "nameEn": "Kaeng Khoi",
+   "provincePcode": "TH19",
+   "centre": [
+    101.0563,
+    14.5762
+   ]
+  },
+  {
+   "pcode": "TH1903",
+   "nameTh": "หนองแค",
+   "nameEn": "Nong Khae",
+   "provincePcode": "TH19",
+   "centre": [
+    100.8577,
+    14.3528
+   ]
+  },
+  {
+   "pcode": "TH1904",
+   "nameTh": "วิหารแดง",
+   "nameEn": "Wihan Daeng",
+   "provincePcode": "TH19",
+   "centre": [
+    100.9866,
+    14.3404
+   ]
+  },
+  {
+   "pcode": "TH1905",
+   "nameTh": "หนองแซง",
+   "nameEn": "Nong Saeng",
+   "provincePcode": "TH19",
+   "centre": [
+    100.8115,
+    14.4824
+   ]
+  },
+  {
+   "pcode": "TH1906",
+   "nameTh": "บ้านหมอ",
+   "nameEn": "Ban Mo",
+   "provincePcode": "TH19",
+   "centre": [
+    100.7224,
+    14.6112
+   ]
+  },
+  {
+   "pcode": "TH1907",
+   "nameTh": "ดอนพุด",
+   "nameEn": "Don Phut",
+   "provincePcode": "TH19",
+   "centre": [
+    100.61,
+    14.6046
+   ]
+  },
+  {
+   "pcode": "TH1908",
+   "nameTh": "หนองโดน",
+   "nameEn": "Nong Don",
+   "provincePcode": "TH19",
+   "centre": [
+    100.6855,
+    14.698
+   ]
+  },
+  {
+   "pcode": "TH1909",
+   "nameTh": "พระพุทธบาท",
+   "nameEn": "Phra Phutthabat",
+   "provincePcode": "TH19",
+   "centre": [
+    100.7821,
+    14.7022
+   ]
+  },
+  {
+   "pcode": "TH1910",
+   "nameTh": "เสาไห้",
+   "nameEn": "Sao Hai",
+   "provincePcode": "TH19",
+   "centre": [
+    100.8413,
+    14.5897
+   ]
+  },
+  {
+   "pcode": "TH1911",
+   "nameTh": "มวกเหล็ก",
+   "nameEn": "Muak Lek",
+   "provincePcode": "TH19",
+   "centre": [
+    101.2546,
+    14.7728
+   ]
+  },
+  {
+   "pcode": "TH1912",
+   "nameTh": "วังม่วง",
+   "nameEn": "Wang Muang",
+   "provincePcode": "TH19",
+   "centre": [
+    101.1399,
+    14.8105
+   ]
+  },
+  {
+   "pcode": "TH1913",
+   "nameTh": "เฉลิมพระเกียรติ",
+   "nameEn": "Chaloem Phra Kiat",
+   "provincePcode": "TH19",
+   "centre": [
+    100.9088,
+    14.6497
+   ]
+  },
+  {
+   "pcode": "TH6001",
+   "nameTh": "เมืองนครสวรรค์",
+   "nameEn": "Mueang Nakhon Sawan",
+   "provincePcode": "TH60",
+   "centre": [
+    100.0873,
+    15.7045
+   ]
+  },
+  {
+   "pcode": "TH6002",
+   "nameTh": "โกรกพระ",
+   "nameEn": "Krok Phra",
+   "provincePcode": "TH60",
+   "centre": [
+    100.04,
+    15.5828
+   ]
+  },
+  {
+   "pcode": "TH6003",
+   "nameTh": "ชุมแสง",
+   "nameEn": "Chum Saeng",
+   "provincePcode": "TH60",
+   "centre": [
+    100.2938,
+    15.8403
+   ]
+  },
+  {
+   "pcode": "TH6004",
+   "nameTh": "หนองบัว",
+   "nameEn": "Nong Bua",
+   "provincePcode": "TH60",
+   "centre": [
+    100.6164,
+    15.8818
+   ]
+  },
+  {
+   "pcode": "TH6005",
+   "nameTh": "บรรพตพิสัย",
+   "nameEn": "Banphot Phisai",
+   "provincePcode": "TH60",
+   "centre": [
+    99.9898,
+    16.0148
+   ]
+  },
+  {
+   "pcode": "TH6006",
+   "nameTh": "เก้าเลี้ยว",
+   "nameEn": "Kao Liao",
+   "provincePcode": "TH60",
+   "centre": [
+    100.1106,
+    15.884
+   ]
+  },
+  {
+   "pcode": "TH6007",
+   "nameTh": "ตาคลี",
+   "nameEn": "Takhli",
+   "provincePcode": "TH60",
+   "centre": [
+    100.5316,
+    15.2529
+   ]
+  },
+  {
+   "pcode": "TH6008",
+   "nameTh": "ท่าตะโก",
+   "nameEn": "Tha Tako",
+   "provincePcode": "TH60",
+   "centre": [
+    100.4359,
+    15.618
+   ]
+  },
+  {
+   "pcode": "TH6009",
+   "nameTh": "ไพศาลี",
+   "nameEn": "Phaisali",
+   "provincePcode": "TH60",
+   "centre": [
+    100.7016,
+    15.5587
+   ]
+  },
+  {
+   "pcode": "TH6010",
+   "nameTh": "พยุหะคีรี",
+   "nameEn": "Phayuha Khiri",
+   "provincePcode": "TH60",
+   "centre": [
+    100.2034,
+    15.5005
+   ]
+  },
+  {
+   "pcode": "TH6011",
+   "nameTh": "ลาดยาว",
+   "nameEn": "Lat Yao",
+   "provincePcode": "TH60",
+   "centre": [
+    99.7817,
+    15.7722
+   ]
+  },
+  {
+   "pcode": "TH6012",
+   "nameTh": "ตากฟ้า",
+   "nameEn": "Tak Fa",
+   "provincePcode": "TH60",
+   "centre": [
+    100.4767,
+    15.3882
+   ]
+  },
+  {
+   "pcode": "TH6013",
+   "nameTh": "แม่วงก์",
+   "nameEn": "Mae Wong",
+   "provincePcode": "TH60",
+   "centre": [
+    99.3973,
+    15.8317
+   ]
+  },
+  {
+   "pcode": "TH6014",
+   "nameTh": "แม่เปิน",
+   "nameEn": "Mae Poen",
+   "provincePcode": "TH60",
+   "centre": [
+    99.4222,
+    15.6806
+   ]
+  },
+  {
+   "pcode": "TH6015",
+   "nameTh": "ชุมตาบง",
+   "nameEn": "Chum Ta Bong",
+   "provincePcode": "TH60",
+   "centre": [
+    99.5571,
+    15.6647
+   ]
+  },
+  {
+   "pcode": "TH6101",
+   "nameTh": "เมืองอุทัยธานี",
+   "nameEn": "Mueang Uthai Thani",
+   "provincePcode": "TH61",
+   "centre": [
+    100.0154,
+    15.387
+   ]
+  },
+  {
+   "pcode": "TH6102",
+   "nameTh": "ทัพทัน",
+   "nameEn": "Thap Than",
+   "provincePcode": "TH61",
+   "centre": [
+    99.8068,
+    15.505
+   ]
+  },
+  {
+   "pcode": "TH6103",
+   "nameTh": "สว่างอารมณ์",
+   "nameEn": "Sawang Arom",
+   "provincePcode": "TH61",
+   "centre": [
+    99.7561,
+    15.6043
+   ]
+  },
+  {
+   "pcode": "TH6104",
+   "nameTh": "หนองฉาง",
+   "nameEn": "Nong Chang",
+   "provincePcode": "TH61",
+   "centre": [
+    99.7699,
+    15.3674
+   ]
+  },
+  {
+   "pcode": "TH6105",
+   "nameTh": "หนองขาหย่าง",
+   "nameEn": "Nong Khayang",
+   "provincePcode": "TH61",
+   "centre": [
+    99.9499,
+    15.3642
+   ]
+  },
+  {
+   "pcode": "TH6106",
+   "nameTh": "บ้านไร่",
+   "nameEn": "Ban Rai",
+   "provincePcode": "TH61",
+   "centre": [
+    99.193,
+    15.3701
+   ]
+  },
+  {
+   "pcode": "TH6107",
+   "nameTh": "ลานสัก",
+   "nameEn": "Lan Sak",
+   "provincePcode": "TH61",
+   "centre": [
+    99.4188,
+    15.5573
+   ]
+  },
+  {
+   "pcode": "TH6108",
+   "nameTh": "ห้วยคต",
+   "nameEn": "Huai Khot",
+   "provincePcode": "TH61",
+   "centre": [
+    99.5856,
+    15.2919
+   ]
+  }
+ ]
+}

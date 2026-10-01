@@ -31,15 +31,20 @@
         <h1 id="brand-name">น้ำท่วมไหม</h1>
         <p>แผนที่จุดน้ำท่วมจากคนในพื้นที่ · กรุงเทพฯ</p>
       </div>
-      <button class="cta" id="report-open" type="button">
+      <button class="cta" id="report-open" type="button" data-tab="flood">
         <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
         <span>แจ้งจุดน้ำท่วม</span>
       </button>
     </header>
 
+    <nav class="tabs" aria-label="มุมมองแผนที่">
+      <a id="tab-flood" href="#/" aria-current="page">น้ำท่วมไหม</a>
+      <a id="tab-north" href="#/north">น้ำเหนืออยู่ไหน</a>
+    </nav>
+
     <p class="notice" id="notice">ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ</p>
 
-    <section class="overview" aria-labelledby="overview-h">
+    <section class="overview" aria-labelledby="overview-h" data-tab="flood">
       <div class="section-head">
         <h2 id="overview-h">สถานการณ์ตอนนี้</h2>
         <span class="updated" id="updated">กำลังโหลด…</span>
@@ -51,7 +56,7 @@
       </dl>
     </section>
 
-    <section class="reports" aria-labelledby="list-h">
+    <section class="reports" aria-labelledby="list-h" data-tab="flood">
       <div class="section-head">
         <h2 id="list-h">จุดที่มีคนรายงาน <span class="count" id="count"></span></h2>
         <button class="toggle" id="demo-toggle" type="button" aria-pressed="false">
@@ -62,7 +67,23 @@
       <ol class="incidents" id="incidents" aria-live="polite"></ol>
     </section>
 
-    <p class="fineprint">
+    <section class="north" aria-labelledby="north-h" data-tab="north" hidden>
+      <div class="section-head"><h2 id="north-h">ลุ่มน้ำเจ้าพระยา</h2></div>
+      <p class="lead">จังหวัดและอำเภอตั้งแต่นครสวรรค์ลงมาถึงกรุงเทพฯ ซูมเข้าเพื่อดูชื่ออำเภอ</p>
+      <h3>ข้อมูลน้ำจากหน่วยงานทางการ</h3>
+      <ul class="official">
+        <li><a href="https://www.rid.go.th/" target="_blank" rel="noopener">กรมชลประทาน</a><span>น้ำในเขื่อนและการระบายน้ำ</span></li>
+        <li><a href="https://www.onwr.go.th/" target="_blank" rel="noopener">สำนักงานทรัพยากรน้ำแห่งชาติ (สทนช.)</a><span>ประกาศสถานการณ์น้ำ</span></li>
+        <li><a href="https://www.disaster.go.th/" target="_blank" rel="noopener">กรมป้องกันและบรรเทาสาธารณภัย (ปภ.)</a><span>ประกาศพื้นที่ภัยพิบัติ</span></li>
+      </ul>
+      <p class="fineprint">
+        ใช้ข้อมูลจากหน่วยงานข้างบนในการตัดสินใจ หน้านี้เป็นตัวอย่างเพื่อการเรียน
+        ขอบเขตการปกครองจาก <a href="https://data.humdata.org/dataset/cod-ab-tha" target="_blank" rel="noopener">COD-AB Thailand</a>
+        กรมแผนที่ทหาร / OCHA (CC BY-IGO)
+      </p>
+    </section>
+
+    <p class="fineprint" data-tab="flood">
       รายงานจากคนในพื้นที่ยังไม่ได้ยืนยันเสมอ แสดงเฉพาะ 6 ชั่วโมงล่าสุด
       ตำแหน่งหมุดเป็นค่าประมาณจากเขต ระบบไม่เก็บพิกัดของผู้รายงาน
     </p>

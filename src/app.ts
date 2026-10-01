@@ -1,4 +1,4 @@
-import { districts } from "./districts.ts"
+import { districts, resolveDistrictId } from "./districts.ts"
 import { createReportStore, toPublicReport, type ReportStore } from "./reports.ts"
 import { latestReading, stationsIn } from "./stations.ts"
 import { toBangkokIso } from "./time.ts"
@@ -20,10 +20,11 @@ export function handle(method: string, path: string, body: unknown, ctx: Context
 
   const reports = ctx.reports ?? defaultReports
 
-  const reportsMatch = path.match(/^\/districts\/([a-z-]+)\/reports$/)
+  // A district is a P-code (TH1038) or, for one release, an old Bangkok slug (lat-phrao).
+  const reportsMatch = path.match(/^\/districts\/([A-Za-z0-9-]+)\/reports$/)
   if (method === "POST" && reportsMatch) {
-    const districtId = reportsMatch[1] ?? ""
-    if (!districts.has(districtId)) return { status: 404, body: { notice: NOTICE, error: "unknown district" } }
+    const districtId = resolveDistrictId(reportsMatch[1] ?? "")
+    if (!districtId) return { status: 404, body: { notice: NOTICE, error: "unknown district" } }
     // No key means the shared "unknown" bucket: still limited, fail closed (RPT-REQ-009 AC5).
     const result = reports.submit(body, districtId, ctx.clientKey ?? "unknown", ctx.now)
     if (!result.ok) {
@@ -38,9 +39,9 @@ export function handle(method: string, path: string, body: unknown, ctx: Context
     }
   }
 
-  const districtMatch = path.match(/^\/districts\/([a-z-]+)$/)
+  const districtMatch = path.match(/^\/districts\/([A-Za-z0-9-]+)$/)
   if (method === "GET" && districtMatch) {
-    const district = districts.get(districtMatch[1] ?? "")
+    const district = districts.get(resolveDistrictId(districtMatch[1] ?? "") ?? "")
     if (!district) return { status: 404, body: { notice: NOTICE, error: "unknown district" } }
     const stations = stationsIn(district.id).map((s) => {
       const latest = latestReading(s, ctx.now)

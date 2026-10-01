@@ -5,11 +5,14 @@
 ;(() => {
   const DEPTH_TH = { ankle: "ข้อเท้า", knee: "เข่า", waist: "เอว" }
   const REFRESH_MS = 60 * 1000
-  const TILES_URL = "/tiles/bangkok.pmtiles"
+  // Each tab has its own basemap extract (ADR 0001); neither is in git, and the page works without them.
+  const TILES = { flood: "/tiles/bangkok.pmtiles", north: "/tiles/thailand.pmtiles" }
   // กึ่งกลางเขต [lon, lat] by district id, from GET /districts. The API stores no coordinates
   // for reports (spec §5, RPT-REQ-013), so pins sit near these points. Approximate on purpose.
   let CENTRES = {}
-  const BOUNDS = [[100.3, 13.5], [100.95, 14.05]]
+  const BOUNDS = { flood: [[100.3, 13.5], [100.95, 14.05]], north: [[97.3, 5.6], [105.7, 20.5]] }
+  // The Chao Phraya basin from Nakhon Sawan to the sea, the area the north tab is about.
+  const BASIN_VIEW = [[99.2, 13.4], [101.6, 16.2]]
   // The whole demo scene (city-wide) fits this view; the normal view starts a little tighter.
   const DEMO_VIEW = { center: [100.635, 13.8], zoom: 10.9 }
 
@@ -29,11 +32,12 @@
     reports: [],
     filter: "all",
     selected: null,
-    demo: Boolean(DEMO) && new URLSearchParams(location.search).has("demo")
+    demo: Boolean(DEMO) && new URLSearchParams(location.search).has("demo"),
+    tab: L.tabFromHash(location.hash)
   }
   const pins = new Map()
   let map = null
-  let hasTiles = false
+  const hasTiles = { flood: false, north: false }
   let firstRender = true
   // True between a style's "style.load" and the next setStyle; custom layers can only be added then.
   let styleReady = false
@@ -215,6 +219,7 @@
     if (!map) return
     for (const { marker } of pins.values()) marker.remove()
     pins.clear()
+    if (state.tab !== "flood") return
     const items = [...state.stations.filter(inFilter), ...[...state.reports].reverse().filter(inFilter)]
     for (const item of items) {
       const b = el("button", "pin")
@@ -302,11 +307,12 @@
    * as water rather than hard polygons. Safe to call any time.
    */
   function syncFloodLayers() {
-    $("legend").hidden = !state.demo || !map
+    const show = state.demo && state.tab === "flood"
+    $("legend").hidden = !show || !map
     if (!map || !styleReady) return
     for (const id of FLOOD_LAYERS) if (map.getLayer(id)) map.removeLayer(id)
     if (map.getSource("demo-flood")) map.removeSource("demo-flood")
-    if (!state.demo) return
+    if (!show) return
 
     const colour = ["interpolate", ["linear"], ["get", "depthCm"], ...FLOOD_CM.flatMap((cm, i) => [cm, cssVar(`--flood-${i + 1}`)])]
     const beforeId = map.getStyle().layers.find((l) => l.type === "symbol")?.id
@@ -350,6 +356,50 @@
     )
   }
 
+  const BASIN_LAYERS = ["basin-district-labels", "basin-districts", "basin-provinces"]
+  const COD_AB = "เขตการปกครอง: <a href=\"https://data.humdata.org/dataset/cod-ab-tha\">COD-AB</a> กรมแผนที่ทหาร / OCHA (CC BY-IGO)"
+
+  /** จังหวัด and อำเภอ outlines of the basin, with Thai district names, on the north tab only. Safe to call any time. */
+  function syncBasinLayers() {
+    if (!map || !styleReady) return
+    for (const id of BASIN_LAYERS) if (map.getLayer(id)) map.removeLayer(id)
+    for (const id of ["basin-provinces", "basin-districts"]) if (map.getSource(id)) map.removeSource(id)
+    if (state.tab !== "north") return
+
+    map.addSource("basin-provinces", { type: "geojson", data: "/data/basin-provinces.geojson", attribution: COD_AB })
+    map.addSource("basin-districts", { type: "geojson", data: "/data/basin-districts.geojson" })
+    map.addLayer({
+      id: "basin-districts",
+      type: "line",
+      source: "basin-districts",
+      paint: { "line-color": cssVar("--line-strong"), "line-width": ["interpolate", ["linear"], ["zoom"], 6, 0.4, 10, 1] }
+    })
+    map.addLayer({ id: "basin-provinces", type: "line", source: "basin-provinces", paint: { "line-color": cssVar("--muted"), "line-width": 1.6 } })
+    map.addLayer({
+      id: "basin-district-labels",
+      type: "symbol",
+      source: "basin-districts",
+      minzoom: 8,
+      layout: { "text-field": ["get", "nameTh"], "text-font": ["Noto Sans Regular"], "text-size": 11 },
+      paint: { "text-color": cssVar("--muted"), "text-halo-color": cssVar("--land"), "text-halo-width": 1.2 }
+    })
+  }
+
+  /** Show the panel and map for the current tab. */
+  function renderTab() {
+    for (const node of document.querySelectorAll("[data-tab]")) node.hidden = node.dataset.tab !== state.tab
+    for (const tab of ["flood", "north"]) {
+      const link = $(`tab-${tab}`)
+      if (tab === state.tab) link.setAttribute("aria-current", "page")
+      else link.removeAttribute("aria-current")
+    }
+    if (!map) return
+    map.setMaxBounds(BOUNDS[state.tab])
+    if (state.tab === "north") map.fitBounds(BASIN_VIEW, { padding: 24, animate: false })
+    else map.jumpTo(state.demo ? DEMO_VIEW : { center: [100.6, 13.78], zoom: 10.3 })
+    applyStyle()
+  }
+
   function renderDemoToggle() {
     const button = $("demo-toggle")
     button.hidden = !DEMO
@@ -372,11 +422,17 @@
   const dark = () => !window.matchMedia("(prefers-color-scheme: light)").matches
   const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 
+  // Glyphs here too, so the basin labels still draw when there is no basemap file.
   function blankStyle() {
-    return { version: 8, sources: {}, layers: [{ id: "land", type: "background", paint: { "background-color": cssVar("--land") } }] }
+    return {
+      version: 8,
+      glyphs: `${location.origin}/vendor/glyphs/{fontstack}/{range}.pbf`,
+      sources: {},
+      layers: [{ id: "land", type: "background", paint: { "background-color": cssVar("--land") } }]
+    }
   }
 
-  function basemapStyle() {
+  function basemapStyle(tilesUrl) {
     const flavor = dark() ? "dark" : "light"
     // Thai labels. The italic face has no Thai glyphs, so water names use the regular face.
     const layers = basemaps.layers("protomaps", basemaps.namedFlavor(flavor), { lang: "th" }).map((layer) => {
@@ -392,7 +448,7 @@
       sources: {
         protomaps: {
           type: "vector",
-          url: `pmtiles://${location.origin}${TILES_URL}`,
+          url: `pmtiles://${location.origin}${tilesUrl}`,
           attribution: "<a href=\"https://openstreetmap.org/copyright\">© OpenStreetMap</a> · <a href=\"https://protomaps.com\">Protomaps</a>"
         }
       },
@@ -412,7 +468,7 @@
       style: blankStyle(),
       center: state.demo ? DEMO_VIEW.center : [100.6, 13.78],
       zoom: state.demo ? DEMO_VIEW.zoom : 10.3,
-      maxBounds: BOUNDS,
+      maxBounds: BOUNDS[state.tab],
       attributionControl: { compact: true }
     })
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right")
@@ -420,16 +476,21 @@
     map.on("style.load", () => {
       styleReady = true
       syncFloodLayers()
+      syncBasinLayers()
     })
-    // The tiles file is not in git. Without it the map still shows pins on a plain background.
-    try {
-      const probe = await fetch(TILES_URL, { headers: { range: "bytes=0-126" } })
-      hasTiles = probe.status === 206 || probe.status === 200
-      if (hasTiles) applyStyle()
-      else showStatus("ยังไม่มีไฟล์แผนที่พื้นหลัง (ดู README หัวข้อแผนที่) หมุดยังดูได้ตามปกติ")
-    } catch {
-      showStatus("โหลดแผนที่พื้นหลังไม่ได้ หมุดยังดูได้ตามปกติ")
-    }
+    if (state.tab === "north") map.fitBounds(BASIN_VIEW, { padding: 24, animate: false })
+    // The tiles files are not in git. Without one, that tab shows its pins or outlines on a plain background.
+    await Promise.all(
+      Object.entries(TILES).map(async ([tab, url]) => {
+        try {
+          const probe = await fetch(url, { headers: { range: "bytes=0-126" } })
+          hasTiles[tab] = probe.status === 206 || probe.status === 200
+        } catch {
+          hasTiles[tab] = false
+        }
+      })
+    )
+    applyStyle()
     // Follow the system theme: new basemap flavour and new water colours.
     window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", applyStyle)
   }
@@ -437,8 +498,10 @@
   function applyStyle() {
     if (!map) return
     styleReady = false
-    // diff: false so every swap is a full load that fires "style.load" and the flood layers come back.
-    map.setStyle(hasTiles ? basemapStyle() : blankStyle(), { diff: false })
+    const tiles = hasTiles[state.tab]
+    showStatus(tiles ? "" : "ยังไม่มีไฟล์แผนที่พื้นหลัง (ดู README หัวข้อแผนที่) ข้อมูลบนแผนที่ยังดูได้ตามปกติ")
+    // diff: false so every swap is a full load that fires "style.load" and the custom layers come back.
+    map.setStyle(tiles ? basemapStyle(TILES[state.tab]) : blankStyle(), { diff: false })
   }
 
   // Report form
@@ -542,6 +605,16 @@
     if (state.demo && map) map.flyTo(DEMO_VIEW)
   })
   $("report-close").addEventListener("click", () => dialog.close())
+  window.addEventListener("hashchange", () => {
+    const tab = L.tabFromHash(location.hash)
+    if (tab === state.tab) return
+    state.tab = tab
+    state.selected = null
+    closePopup()
+    renderTab()
+    render()
+  })
+  renderTab()
 
   async function refresh() {
     try {

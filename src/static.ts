@@ -16,8 +16,12 @@ const FILES: Record<string, { file: string; type: string }> = {
   "/fonts/noto-sans-thai-thai.woff2": { file: "fonts/noto-sans-thai-thai.woff2", type: "font/woff2" },
   "/fonts/noto-sans-thai-latin.woff2": { file: "fonts/noto-sans-thai-latin.woff2", type: "font/woff2" },
   "/app.css": { file: "app.css", type: "text/css; charset=utf-8" },
-  // Protomaps extract of Bangkok (ADR 0001). Not in git; see README for how to make it.
+  // Protomaps extracts (ADR 0001): Bangkok in detail, Thailand to about z10. Not in git; see README.
   "/tiles/bangkok.pmtiles": { file: "tiles/bangkok.pmtiles", type: "application/octet-stream" },
+  "/tiles/thailand.pmtiles": { file: "tiles/thailand.pmtiles", type: "application/octet-stream" },
+  // จังหวัด and อำเภอ outlines of the Chao Phraya basin, from HDX COD-AB (scripts/build-districts.mjs).
+  "/data/basin-provinces.geojson": { file: "data/basin-provinces.geojson", type: "application/geo+json" },
+  "/data/basin-districts.geojson": { file: "data/basin-districts.geojson", type: "application/geo+json" },
   ...vendoredFiles()
 }
 
