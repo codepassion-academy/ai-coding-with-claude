@@ -1,8 +1,10 @@
 import { randomBytes, randomUUID } from "node:crypto"
+import { checkBearer, createAuthFailureLimiter, isAdminEnabled } from "./admin.ts"
 import { districts } from "./districts.ts"
 import { createMemoryReportStore, type ReportStore } from "./report-store.ts"
 import { hashReporter } from "./reporter.ts"
 import {
+  adminItems,
   landmarkKey,
   rateLimitStatus,
   REPORT_LABEL,
@@ -16,15 +18,42 @@ import { toBangkokIso } from "./time.ts"
 
 export type Response = { status: number; body: unknown; headers?: Record<string, string> }
 
-export type Context = { now: Date; clientIp?: string }
+export type Context = { now: Date; clientIp?: string; authorization?: string }
 
-export type AppDeps = { store: ReportStore; ipHashSecret: string }
+export type AppDeps = { store: ReportStore; ipHashSecret: string; adminToken?: string }
 
 export const NOTICE = "ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ"
 
 /** Build a router around its own dependencies. Tests use this with a fresh memory store. */
 export function createApp(deps: AppDeps): typeof handle {
-  return (method, path, body, ctx = { now: new Date() }) => {
+  const authFailures = createAuthFailureLimiter()
+
+  return (method, path, body, ctx = { now: new Date() }): Response => {
+    if (path.startsWith("/admin/")) {
+      // The token is checked before anything is looked up, so a 401 never reveals whether a report exists.
+      const { adminToken } = deps
+      if (!isAdminEnabled(adminToken)) return { status: 503, body: { error: "admin disabled" } }
+      if (!ctx.clientIp) return { status: 500, body: { error: "client address unavailable" } }
+      const who = hashReporter(deps.ipHashSecret, ctx.clientIp)
+      const blocked = authFailures.status(who, ctx.now)
+      if (blocked.limited) {
+        return {
+          status: 429,
+          body: { error: "rate limit exceeded", retryAfterSeconds: blocked.retryAfterSeconds },
+          headers: { "Retry-After": String(blocked.retryAfterSeconds) }
+        }
+      }
+      if (!checkBearer(ctx.authorization, adminToken)) {
+        authFailures.recordFailure(who, ctx.now)
+        return { status: 401, body: { error: "unauthorized" }, headers: { "WWW-Authenticate": "Bearer" } }
+      }
+
+      if (method === "GET" && path === "/admin/reports") {
+        return { status: 200, body: { reports: adminItems(deps.store.all(), ctx.now) } }
+      }
+      return { status: 404, body: { error: "not found" } }
+    }
+
     if (method === "GET" && path === "/districts") {
       return { status: 200, body: { notice: NOTICE, districts: [...districts.values()] } }
     }

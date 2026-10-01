@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto"
 import { createServer } from "node:http"
+import { ADMIN_TOKEN_MIN_LENGTH, isAdminEnabled } from "./admin.ts"
 import { createApp } from "./app.ts"
 import { createFileReportStore } from "./report-store.ts"
 
@@ -10,7 +11,16 @@ if (!process.env.IP_HASH_SECRET) {
   console.warn("IP_HASH_SECRET is not set: using a random secret, so report quotas reset on every restart")
 }
 
-const app = createApp({ store: createFileReportStore(process.env.REPORTS_FILE ?? "var/reports.json"), ipHashSecret })
+const adminToken = process.env.ADMIN_TOKEN
+if (adminToken !== undefined && !isAdminEnabled(adminToken)) {
+  console.warn(`ADMIN_TOKEN is shorter than ${ADMIN_TOKEN_MIN_LENGTH} characters: the admin channel stays closed`)
+}
+
+const app = createApp({
+  store: createFileReportStore(process.env.REPORTS_FILE ?? "var/reports.json"),
+  ipHashSecret,
+  adminToken
+})
 
 createServer((req, res) => {
   let raw = ""
@@ -26,7 +36,7 @@ createServer((req, res) => {
       }
     }
     const path = new URL(req.url ?? "/", "http://x").pathname
-    const ctx = { now: new Date(), clientIp: req.socket.remoteAddress }
+    const ctx = { now: new Date(), clientIp: req.socket.remoteAddress, authorization: req.headers.authorization }
     const { status, body: out, headers } = app(req.method ?? "GET", path, body, ctx)
     res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...headers }).end(JSON.stringify(out))
   })

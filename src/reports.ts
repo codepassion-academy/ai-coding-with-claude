@@ -24,7 +24,18 @@ export type ReportItem = {
   reporterCount: number
 }
 
-export type ReportInput = { districtId: string; landmark: string; depthCm: number; observedAt: Date }
+export type AdminItem = {
+  id: string
+  districtId: string
+  landmark: string
+  depthCm: number
+  observedAt: string // Bangkok time
+  receivedAt: string // Bangkok time
+  hiddenAt: string | null // Bangkok time
+  reporterRef: string | null
+}
+
+export type ReportInput ={ districtId: string; landmark: string; depthCm: number; observedAt: Date }
 
 export type Validation = { ok: true; input: ReportInput } | { ok: false; fields: string[] }
 
@@ -43,6 +54,7 @@ export const PHONE_MASK = "[ปิดเบอร์โทร]"
 export const LANDMARK_PREFIXES = ["บริเวณ", "แถว", "หน้า", "ใกล้", "ตรง"]
 export const RATE_LIMIT_MAX = 5
 export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+export const ADMIN_LIST_WINDOW_MS = 24 * 60 * 60 * 1000
 
 // Arabic or Thai digits, at most one separator between digits, optional leading +.
 const PHONE_NUMBER = /\+?[0-9๐-๙](?:[ .-]?[0-9๐-๙]){8,}/g
@@ -92,6 +104,28 @@ export function visibleItems(reports: readonly Report[], districtId: string, now
       minutesAgo: Math.max(0, Math.floor((now.getTime() - observedMs(latest)) / 60_000)),
       reporterCount: reporters.size
     }))
+}
+
+/** A report as the admin sees it: ids and times, a short reporter reference, no full hash and no address. */
+export function adminItem(r: Report): AdminItem {
+  return {
+    id: r.id,
+    districtId: r.districtId,
+    landmark: r.landmark,
+    depthCm: r.depthCm,
+    observedAt: toBangkokIso(new Date(r.observedAt)),
+    receivedAt: toBangkokIso(new Date(r.receivedAt)),
+    hiddenAt: r.hiddenAt === null ? null : toBangkokIso(new Date(r.hiddenAt)),
+    reporterRef: r.reporterHash === null ? null : r.reporterHash.slice(0, 8)
+  }
+}
+
+/** Reports received in the last 24 hours, hidden or not, newest received first. */
+export function adminItems(reports: readonly Report[], now: Date): AdminItem[] {
+  return reports
+    .filter((r) => new Date(r.receivedAt).getTime() > now.getTime() - ADMIN_LIST_WINDOW_MS)
+    .sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime())
+    .map(adminItem)
 }
 
 /** Whether a reporter has used up the quota of accepted reports in the sliding window (RPT-REQ-007). */
