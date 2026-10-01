@@ -54,6 +54,7 @@ export const PHONE_MASK = "[ปิดเบอร์โทร]"
 export const LANDMARK_PREFIXES = ["บริเวณ", "แถว", "หน้า", "ใกล้", "ตรง"]
 export const RATE_LIMIT_MAX = 5
 export const RATE_LIMIT_WINDOW_MS = 60 * 60 * 1000
+export const REPORTER_HASH_TTL_MS = 24 * 60 * 60 * 1000
 export const ADMIN_LIST_WINDOW_MS = 24 * 60 * 60 * 1000
 
 // Arabic or Thai digits, at most one separator between digits, optional leading +.

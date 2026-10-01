@@ -16,8 +16,21 @@ if (adminToken !== undefined && !isAdminEnabled(adminToken)) {
   console.warn(`ADMIN_TOKEN is shorter than ${ADMIN_TOKEN_MIN_LENGTH} characters: the admin channel stays closed`)
 }
 
+const store = createFileReportStore(process.env.REPORTS_FILE ?? "var/reports.json")
+
+// Reporter hashes are cleared 24 hours after a report arrives (RPT-REQ-008): once now, then every hour.
+function purgeReporterHashes(): void {
+  try {
+    store.purgeReporterHashes(new Date())
+  } catch (error) {
+    console.warn("could not purge reporter hashes:", error instanceof Error ? error.message : "unknown error")
+  }
+}
+purgeReporterHashes()
+setInterval(purgeReporterHashes, 60 * 60 * 1000).unref()
+
 const app = createApp({
-  store: createFileReportStore(process.env.REPORTS_FILE ?? "var/reports.json"),
+  store,
   ipHashSecret,
   adminToken,
   // One JSON line per event on stdout. The app only ever passes allowed fields (src/report-log.ts).

@@ -84,6 +84,53 @@ describe.each(stores)("ReportStore contract: %s", (_name, create) => {
     store.add(report({ id: "r-2", depthCm: 40 }))
     expect(store.all()).toEqual([report({ id: "r-1" }), report({ id: "r-2", depthCm: 40 })])
   })
+
+  describe("purgeReporterHashes", () => {
+    const NOW = new Date("2026-09-30T12:30:00Z")
+
+    it("RPT-REQ-008 AC5 nulls the hash at exactly 24 hours but keeps it one second earlier", () => {
+      const store = create()
+      store.add(report({ id: "old", receivedAt: "2026-09-29T12:30:00.000Z" }))
+      store.add(report({ id: "new", receivedAt: "2026-09-29T12:30:01.000Z" }))
+      store.purgeReporterHashes(NOW)
+      expect(store.all().map((r) => [r.id, r.reporterHash])).toEqual([
+        ["old", null],
+        ["new", "a".repeat(64)]
+      ])
+    })
+
+    it("RPT-REQ-008 AC5 changes no field other than reporterHash", () => {
+      const store = create()
+      const old = report({ id: "old", receivedAt: "2026-09-28T00:00:00.000Z", hiddenAt: "2026-09-28T01:00:00.000Z" })
+      store.add(old)
+      store.purgeReporterHashes(NOW)
+      expect(store.all()).toEqual([{ ...old, reporterHash: null }])
+    })
+
+    it("RPT-REQ-008 AC5 returns how many hashes it cleared and skips ones already null", () => {
+      const store = create()
+      store.add(report({ id: "r-1", receivedAt: "2026-09-28T00:00:00.000Z" }))
+      store.add(report({ id: "r-2", receivedAt: "2026-09-28T00:00:00.000Z", reporterHash: null }))
+      store.add(report({ id: "r-3" }))
+      expect(store.purgeReporterHashes(NOW)).toBe(1)
+      expect(store.purgeReporterHashes(NOW)).toBe(0)
+    })
+
+    it("RPT-REQ-008 AC5 never deletes: the number of reports stays the same", () => {
+      const store = create()
+      store.add(report({ receivedAt: "2026-09-28T00:00:00.000Z" }))
+      store.purgeReporterHashes(NOW)
+      expect(store.all()).toHaveLength(1)
+    })
+
+    it("RPT-REQ-008 AC5 does not change a report object that was handed out earlier", () => {
+      const store = create()
+      store.add(report({ receivedAt: "2026-09-28T00:00:00.000Z" }))
+      const before = store.all()[0]
+      store.purgeReporterHashes(NOW)
+      expect(before?.reporterHash).toBe("a".repeat(64))
+    })
+  })
 })
 
 describe("file store", () => {
@@ -118,6 +165,25 @@ describe("file store: hiding", () => {
     store.add(report())
     const before = readFileSync(path, "utf8")
     store.setHidden("nope", "2026-09-30T12:40:00.000Z")
+    expect(readFileSync(path, "utf8")).toBe(before)
+  })
+})
+
+describe("file store: purging hashes", () => {
+  it("RPT-REQ-008 AC5 keeps the cleared hash after reopening the same path", () => {
+    const path = join(dir, "reports.json")
+    const store = createFileReportStore(path)
+    store.add(report({ receivedAt: "2026-09-28T00:00:00.000Z" }))
+    store.purgeReporterHashes(new Date("2026-09-30T12:30:00Z"))
+    expect(createFileReportStore(path).all()).toEqual([report({ receivedAt: "2026-09-28T00:00:00.000Z", reporterHash: null })])
+  })
+
+  it("RPT-REQ-008 AC5 does not rewrite the file when there is nothing to clear", () => {
+    const path = join(dir, "reports.json")
+    const store = createFileReportStore(path)
+    store.add(report())
+    const before = readFileSync(path, "utf8")
+    store.purgeReporterHashes(new Date("2026-09-30T12:30:00Z"))
     expect(readFileSync(path, "utf8")).toBe(before)
   })
 })
