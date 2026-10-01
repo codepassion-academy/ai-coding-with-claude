@@ -1,6 +1,6 @@
 # 02 · กึ่งกลางเขต in the API
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (District centre in the API)
 Blocked by: none
 

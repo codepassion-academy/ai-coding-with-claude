@@ -1,6 +1,6 @@
 # 04 · Mask phone numbers before house numbers
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Changes to flood-reports; RPT-REQ-005)
 Blocked by: none
 
