@@ -85,15 +85,19 @@ glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติ�
 
 URL บน `*.workers.dev` เป็น **demo สำหรับสอน** ไม่ประชาสัมพันธ์ให้ประชาชน ข้อมูลยังเป็นข้อมูลสมมติ (ดู [ADR 0003](docs/adr/0003-cloudflare-hosting.md))
 
-- push เข้า `main` → GitHub Actions รัน `npm run lint` และ `npm test` ผ่านแล้วจึง `wrangler deploy` ([deploy.yml](.github/workflows/deploy.yml))
-- ไฟล์ tiles ใหญ่เกิน 25 MiB ของ Static Assets จึงอยู่ใน R2 bucket `namthuam-tiles` workflow อัปโหลดเฉพาะเมื่อ `public/tiles/` เปลี่ยน
+- push เข้า `main` → Workers Builds ของ Cloudflare รัน `npm run lint` และ `npm test` แล้วจึง `wrangler deploy` (ตั้งใน dashboard ไม่มีไฟล์ CI ใน repo)
+- ไฟล์ tiles ใหญ่เกิน 25 MiB ของ Static Assets จึงอยู่ใน R2 bucket `namthuam-tiles` อัปโหลดด้วยมือเมื่อไฟล์เปลี่ยน
 - รายงานและ rate limit อยู่ใน Durable Object เดียว (SQLite) client key มาจาก `CF-Connecting-IP` แล้ว HMAC ไม่เก็บ IP
 
-ตั้งค่าครั้งแรก (ต้องมีบัญชี Cloudflare และ `gh` ที่ล็อกอินแล้ว)
+ตั้งค่าครั้งแรก ทำใน [dashboard](https://dash.cloudflare.com) ทั้งหมด ไม่ต้องใช้ CLI หรือ API token
 
-```bash
-scripts/setup-cloudflare.sh
-```
+1. **R2** → Create bucket ชื่อ `namthuam-tiles` → เปิด bucket → Upload `public/tiles/bangkok.pmtiles` (ต้องมี bucket ก่อน deploy ครั้งแรก)
+2. **Workers & Pages** → Create → Import a repository → เลือก `codepassion-academy/ai-coding-with-claude`
+   - Project name: `namthuam` (ต้องตรงกับ `name` ใน `wrangler.jsonc`)
+   - Build command: `npm ci && npm run lint && npm test`
+   - Deploy command: `npx wrangler@4.145.0 deploy`
+   - Production branch: `main` ปิด builds for non-production branches
+3. Worker `namthuam` → **Settings → Variables and Secrets** → Add → Type *Secret* ชื่อ `CLIENT_KEY_SECRET` ค่าสุ่มยาว (เช่นจาก `openssl rand -hex 32`) ก่อนตั้งค่านี้ GET ใช้ได้ แต่ POST รายงานจะได้ 500
 
 ลองบนเครื่องด้วย workerd จริง (ไม่ต้องลง package)
 
@@ -124,9 +128,7 @@ npx wrangler@4.145.0 dev --var CLIENT_KEY_SECRET:dev-only
 | `src/server.ts` | HTTP server สำหรับรันในเครื่อง |
 | `src/worker.ts` | Cloudflare Worker: ไฟล์หน้าเว็บจาก Static Assets, tiles จาก R2, API ผ่าน Durable Object (ADR 0003) |
 | `src/reports-object.ts` | Durable Object ที่ถือรายงานและ rate limiter เก็บลง SQLite |
-| `wrangler.jsonc` | config ของ Cloudflare Workers |
-| `.github/workflows/deploy.yml` | deploy ขึ้น Cloudflare ทุกครั้งที่ `main` เปลี่ยน หลัง lint และ test ผ่าน |
-| `scripts/setup-cloudflare.sh` | wizard ตั้งค่า Cloudflare และ GitHub secrets ครั้งแรก |
+| `wrangler.jsonc` | config ของ Cloudflare Workers (Workers Builds deploy ทุกครั้งที่ `main` เปลี่ยน) |
 | `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`), ข้อมูลจำลอง `demo.js` (เปิดด้วย `/?demo`) |
 | `public/fonts/` | Noto Sans Thai แบบ variable (SIL OFL 1.1, ดู `OFL.txt`) host เองไม่ดึงจาก Google Fonts |
 | `tests/` | test ด้วย vitest |

@@ -1,4 +1,4 @@
-// Cloudflare Workers config (ADR 0003). Deployed by .github/workflows/deploy.yml when main changes.
+// Cloudflare Workers config (ADR 0003). Deployed by Workers Builds (dashboard Git integration) when main changes.
 {
   "name": "namthuam",
   "main": "src/worker.ts",

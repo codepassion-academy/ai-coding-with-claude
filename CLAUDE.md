@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The course adds a "citizen flood reports" feature on top. Its intent and spec live in `docs/intent/flood-reports.md` and `docs/specs/flood-reports.md` (requirement IDs `RPT-REQ-nnn`, constants named in spec §2); the code is in `src/reports.ts`, `src/rate-limit.ts` and `src/read-body.ts`. Read the spec before touching that feature. Design must follow the `security-baseline` skill.
 
-Deployed as a teaching demo to Cloudflare Workers on every push to `main` (`.github/workflows/deploy.yml`, `wrangler.jsonc`, ADR 0003); one-time setup is `scripts/setup-cloudflare.sh`. Free plan: 10 ms CPU per request, so keep request paths linear.
+Deployed as a teaching demo to Cloudflare Workers on every push to `main` by Workers Builds (Cloudflare's Git integration, configured in the dashboard; `wrangler.jsonc`, ADR 0003). One-time setup steps are in the README. Free plan: 10 ms CPU per request, so keep request paths linear.
 
 A map web page (`GET /`, files in `public/`) sits on top of the API. Its spec is `.scratch/flood-map/spec.md`; decisions are in `docs/adr/` (0001 self-host every map asset, 0002 NFKC). Report pins are approximate by district: the API stores no coordinates. Demo data (`/?demo`) is opt-in, labelled, and never sent to the API. Domain words are in `CONTEXT.md`.
 

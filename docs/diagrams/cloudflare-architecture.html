@@ -61,12 +61,12 @@
   <div class="frame">
     <p class="eyebrow">Architecture · ADR 0003</p>
     <h1>น้ำท่วมไหม บน Cloudflare Workers</h1>
-    <p class="sub">ทุก request ผ่าน Worker ก่อน รายงานและโควตาอยู่ใน Durable Object เดียว deploy เองเมื่อ main เปลี่ยน</p>
+    <p class="sub">ทุก request ผ่าน Worker ก่อน รายงานและโควตาอยู่ใน Durable Object เดียว Workers Builds deploy เองเมื่อ main เปลี่ยน</p>
 
     <div class="scroll">
     <svg viewBox="0 0 1000 580" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="cloudflare-architecture-title cloudflare-architecture-desc">
       <title id="cloudflare-architecture-title">น้ำท่วมไหม on Cloudflare Workers</title>
-      <desc id="cloudflare-architecture-desc">A push to main runs GitHub Actions, which tests and deploys the Worker and uploads map tiles to R2 when they change; viewers reach only the Worker, which serves listed page files from Static Assets, tile byte ranges from R2, and sends API calls with an HMAC client key to one Durable Object that stores reports in SQLite.</desc>
+      <desc id="cloudflare-architecture-desc">A push to main triggers Cloudflare Workers Builds, which lints, tests and deploys the Worker; map tiles sit in R2, uploaded by hand; viewers reach only the Worker, which serves listed page files from Static Assets, tile byte ranges from R2, and sends API calls with an HMAC client key to one Durable Object that stores reports in SQLite.</desc>
       <defs>
         <marker id="arrow" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#6E6E73"/></marker>
         <marker id="arrow-accent" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="#E8263F"/></marker>
@@ -77,25 +77,20 @@
 
       <!-- ── Zones ─────────────────────────────────────────────── -->
       <rect x="24" y="60" width="416" height="128" rx="8" fill="rgba(29,29,31,0.02)" stroke="rgba(29,29,31,0.10)" stroke-width="0.8"/>
-      <rect x="40" y="64" width="56" height="12" rx="2" fill="#F5F5F7"/>
-      <text x="68" y="73" fill="rgba(29,29,31,0.45)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">GITHUB</text>
+      <rect x="40" y="64" width="104" height="12" rx="2" fill="#F5F5F7"/>
+      <text x="92" y="73" fill="rgba(29,29,31,0.45)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">GITHUB → BUILD</text>
 
       <rect x="480" y="60" width="496" height="440" rx="8" fill="rgba(29,29,31,0.02)" stroke="rgba(29,29,31,0.10)" stroke-width="0.8"/>
       <rect x="496" y="64" width="144" height="12" rx="2" fill="#F5F5F7"/>
       <text x="568" y="73" fill="rgba(29,29,31,0.45)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.14em">CLOUDFLARE · FREE PLAN</text>
 
       <!-- ── Arrows (before nodes) ─────────────────────────────── -->
-      <!-- main → Actions -->
+      <!-- main → Workers Builds -->
       <line x1="208" y1="128" x2="254" y2="128" stroke="#6E6E73" stroke-width="1.2" marker-end="url(#arrow)"/>
       <rect x="214" y="104" width="36" height="12" rx="2" fill="#F5F5F7"/>
       <text x="232" y="113" fill="#86868B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">PUSH</text>
 
-      <!-- Actions → R2 (only when tiles change) -->
-      <line x1="416" y1="128" x2="778" y2="128" stroke="#6E6E73" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <rect x="564" y="104" width="112" height="12" rx="2" fill="#F5F5F7"/>
-      <text x="620" y="113" fill="#86868B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">IF TILES CHANGED</text>
-
-      <!-- Actions → Worker (deploy after lint + test) -->
+      <!-- Workers Builds → Worker (deploy after lint + test) -->
       <path d="M 336,160 V 192 Q 336,200 344,200 H 572 Q 580,200 580,208 V 242" fill="none" stroke="#6E6E73" stroke-width="1.2" marker-end="url(#arrow)"/>
       <rect x="392" y="176" width="48" height="12" rx="2" fill="#F5F5F7"/>
       <text x="416" y="185" fill="#86868B" font-size="8" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.06em">DEPLOY</text>
@@ -129,12 +124,12 @@
       <text x="128" y="134" fill="#1D1D1F" font-size="12" font-weight="600" font-family="'Noto Sans Thai', sans-serif" text-anchor="middle">branch main</text>
       <text x="128" y="150" fill="#6E6E73" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">codepassion-academy</text>
 
-      <!-- GitHub Actions -->
+      <!-- Workers Builds -->
       <rect x="256" y="96" width="160" height="64" rx="6" fill="#F5F5F7"/>
       <rect x="256" y="96" width="160" height="64" rx="6" fill="#ffffff" stroke="#1D1D1F" stroke-width="1"/>
       <rect x="264" y="102" width="20" height="12" rx="2" fill="transparent" stroke="rgba(29,29,31,0.40)" stroke-width="0.8"/>
       <text x="274" y="111" fill="rgba(29,29,31,0.75)" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">CI</text>
-      <text x="336" y="134" fill="#1D1D1F" font-size="12" font-weight="600" font-family="'Noto Sans Thai', sans-serif" text-anchor="middle">GitHub Actions</text>
+      <text x="336" y="134" fill="#1D1D1F" font-size="12" font-weight="600" font-family="'Noto Sans Thai', sans-serif" text-anchor="middle">Workers Builds</text>
       <text x="336" y="150" fill="#6E6E73" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">lint → test → deploy</text>
 
       <!-- Viewer -->
@@ -160,7 +155,7 @@
       <rect x="788" y="118" width="20" height="12" rx="2" fill="transparent" stroke="rgba(110,110,115,0.50)" stroke-width="0.8"/>
       <text x="798" y="127" fill="#6E6E73" font-size="7" font-family="'Geist Mono', monospace" text-anchor="middle" letter-spacing="0.08em">R2</text>
       <text x="866" y="150" fill="#1D1D1F" font-size="12" font-weight="600" font-family="'Noto Sans Thai', sans-serif" text-anchor="middle">ไฟล์แผนที่</text>
-      <text x="866" y="166" fill="#6E6E73" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">bangkok.pmtiles 44.5 MiB</text>
+      <text x="866" y="166" fill="#6E6E73" font-size="9" font-family="'Geist Mono', monospace" text-anchor="middle">bangkok.pmtiles (manual)</text>
 
       <!-- Durable Object (focal) -->
       <rect x="780" y="252" width="172" height="64" rx="6" fill="#F5F5F7"/>
@@ -188,15 +183,12 @@
       <line x1="264" y1="549" x2="296" y2="549" stroke="#6E6E73" stroke-width="1.2" marker-end="url(#arrow)"/>
       <text x="304" y="552" fill="#6E6E73" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">INTERNAL CALL / DEPLOY</text>
 
-      <line x1="480" y1="549" x2="512" y2="549" stroke="#6E6E73" stroke-width="1" stroke-dasharray="4,3" marker-end="url(#arrow)"/>
-      <text x="520" y="552" fill="#6E6E73" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">CONDITIONAL</text>
-
-      <rect x="640" y="543" width="16" height="12" rx="2" fill="rgba(232,38,63,0.08)" stroke="#E8263F" stroke-width="1"/>
-      <text x="664" y="552" fill="#6E6E73" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">FOCAL: NEW IN ADR 0003</text>
+      <rect x="480" y="543" width="16" height="12" rx="2" fill="rgba(232,38,63,0.08)" stroke="#E8263F" stroke-width="1"/>
+      <text x="504" y="552" fill="#6E6E73" font-size="8" font-family="'Geist Mono', monospace" letter-spacing="0.06em">FOCAL: NEW IN ADR 0003</text>
     </svg>
     </div>
 
-    <footer>ข้อมูลสมมติ · demo สำหรับสอน ไม่ใช่ระบบเตือนภัย · wrangler.jsonc · .github/workflows/deploy.yml · docs/adr/0003-cloudflare-hosting.md</footer>
+    <footer>ข้อมูลสมมติ · demo สำหรับสอน ไม่ใช่ระบบเตือนภัย · wrangler.jsonc · docs/adr/0003-cloudflare-hosting.md</footer>
   </div>
 </body>
 </html>

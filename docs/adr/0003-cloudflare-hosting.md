@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# Deploy เป็น demo บน Cloudflare Workers (Free plan) เก็บรายงานใน Durable Object และ deploy อัตโนมัติจาก `main` ด้วย GitHub Actions
+# Deploy เป็น demo บน Cloudflare Workers (Free plan) เก็บรายงานใน Durable Object และ deploy อัตโนมัติจาก `main` ด้วย Workers Builds
 
 เดิม intent กำหนดให้รันในเครื่องเท่านั้นและเก็บรายงานใน memory ตอนนี้ต้องการ URL ที่ผู้เรียนเปิดดูได้และอัปเดตเองทุกครั้งที่ `main` เปลี่ยน จึง deploy ขึ้น Cloudflare Workers ในฐานะ **demo สำหรับสอน**: URL สาธารณะบน `*.workers.dev` ไม่ประชาสัมพันธ์ให้ประชาชน ยังเป็นข้อมูลสมมติและมี `NOTICE` ทุก response งบ 0 บาท (Free plan) ข้อเท็จจริงของ Cloudflare ที่ใช้ตัดสินอยู่ใน [`docs/research/cloudflare-workers-hosting.md`](../research/cloudflare-workers-hosting.md) (ตรวจเมื่อ 2026-10-01)
 
@@ -12,13 +12,13 @@ status: accepted
 - **ที่เก็บรายงานและ rate limiter:** Durable Object ตัวเดียว (SQLite backend ซึ่งเป็นแบบเดียวที่ Free plan ใช้ได้) ทุก POST และ GET รายงานผ่าน object นี้ จึงเรียงทีละ request เหมือน `handle()` แบบ sync เดิม ยังลบของหมดอายุแบบ lazy ตาม RPT-REQ-012 แต่ข้อมูลอยู่รอดเมื่อ object ถูกปิด
 - **Client key:** บน Worker อ่านจาก header `CF-Connecting-IP` เท่านั้น ห้ามอ่าน `X-Forwarded-For`/`Forwarded` normalize แบบเดิม (IPv4-mapped, IPv6 /64) แล้ว HMAC-SHA-256 ด้วย secret (`wrangler secret`) ก่อนส่งเข้า Durable Object IP ดิบจึงไม่ถูกเขียนลง SQLite ไม่มี header → bucket `"unknown"` (fail closed) ตอน dev ในเครื่องยังใช้ socket address
 - **ไฟล์ tiles:** `public/tiles/bangkok.pmtiles` (44.5 MiB) อยู่ใน git แต่เกินเพดาน 25 MiB ต่อไฟล์ของ Static Assets จึงเก็บใน R2 และให้ Worker อ่านด้วย `get(key, { range })` แล้วตอบ `206` เองบน origin เดียวกัน ADR 0001 ข้อ "ไม่โหลดจากโดเมนอื่น" และ CSP จึงไม่เปลี่ยน
-- **Auto-deploy:** GitHub Actions เมื่อ push เข้า `main`: `npm ci` → `npm run lint` → `npm test` ผ่านก่อนจึง `cloudflare/wrangler-action` deploy อัปโหลด tiles ขึ้น R2 เฉพาะ commit ที่ `public/tiles/**` เปลี่ยน secrets: `CLOUDFLARE_API_TOKEN` (สิทธิ์แก้ Workers + เขียน R2) และ `CLOUDFLARE_ACCOUNT_ID` ไม่ทำ preview deploy ต่อ branch หรือ PR เพราะจะใช้ Durable Object และ R2 ชุดเดียวกับ production
+- **Auto-deploy:** Workers Builds (Git integration ของ Cloudflare) ต่อ repo จาก dashboard แล้ว build ทุกครั้งที่ push เข้า `main` build command `npm ci && npm run lint && npm test` deploy command `npx wrangler@4.145.0 deploy` ไม่มี API token หรือ secret ใน GitHub ไม่ทำ preview build ของ branch อื่น เพราะจะใช้ Durable Object และ R2 ชุดเดียวกับ production ไฟล์ tiles อัปโหลดขึ้น R2 ด้วยมือผ่าน dashboard เมื่อไฟล์เปลี่ยน (นานๆ ครั้ง)
 - **POST เปิดให้ทุกคน** ใช้ rate limit 5 รายงาน/ชม./client ตาม RPT-REQ-008
 
 ## Considered Options
 
-- **Workers Builds (Git integration ของ Cloudflare):** ไม่ต้องเก็บ secret ใน GitHub แต่ยังไม่มี docs ยืนยันว่า build command ที่ fail จะหยุด deploy และผู้เรียนมองไม่เห็นขั้นตอน test ใน repo ไม่เลือก
-- **Cloudflare Pages:** Cloudflare แนะนำให้โปรเจกต์ใหม่ใช้ Workers ไม่เลือก
+- **GitHub Actions + `wrangler-action`:** เห็นขั้นตอน test ใน repo และอัปโหลด tiles อัตโนมัติ แต่ต้องสร้าง API token เก็บเป็น GitHub secret และใช้ wizard ตั้งค่า ลองแล้ว (2026-10-01) การ login ของ wrangler ติด OAuth CSRF จึงเปลี่ยนมาใช้ Workers Builds ที่ตั้งค่าใน dashboard อย่างเดียว ไม่เลือก
+- **Cloudflare Pages:** Pages Functions export Durable Object เองไม่ได้ (ต้องมี Worker แยก) และ Pages ตอบ 200 แทน 206 กับ range request ไม่เลือก
 - **`node:http` ผ่าน `httpServerHandler` (nodejs_compat):** ใช้ `server.ts` เดิมได้ แต่ `req.socket.remoteAddress` ยังไม่ยืนยันว่ามีค่า และ `static.ts` อ่านไฟล์จากดิสก์ไม่ได้อยู่ดี ส่วน `handle()` ไม่ผูกกับ `node:http` อยู่แล้ว ไม่เลือก
 - **`Map` ใน memory ตามเดิม:** แต่ละ isolate ไม่แชร์ memory และถูกปิดทิ้งได้ตลอด รายงานจะหายหรือแยกกัน และเลี่ยง rate limit ได้ง่าย ไม่เลือก
 - **Durable Object ที่เก็บแค่ใน memory:** แก้โค้ดน้อยที่สุด แต่ object ที่ว่างถูกปิดภายในไม่กี่นาที รายงานจะหายแทบทุกครั้งที่ผู้เรียนเปิดดู ไม่เลือก
@@ -37,4 +37,5 @@ status: accepted
 - **Tile range request ก็นับรวมใน 100k request/วันเช่นกัน:** แผนที่หนึ่งครั้งยิงหลายสิบ request พอสำหรับ demo ถ้าคนเข้ามากขึ้นให้พิจารณา R2 custom domain ใหม่
 - **`CF-Connecting-IP` ถูก Cloudflare เขียนทับเสมอหรือไม่ ยังไม่มี docs ยืนยัน:** ต้องมี test ที่ยืนยันว่าส่ง header นี้ปลอมแล้วไม่เปลี่ยนโควตาบน URL ที่ deploy จริง
 - **HMAC secret:** หมุน secret แล้วโควตาเดิมทั้งหมดถูกรีเซ็ต ยอมรับได้
+- **ยังไม่มี docs ยืนยันว่า build command ที่ fail จะหยุด deploy ใน Workers Builds:** ต้องลองครั้งเดียวด้วย test ที่ตั้งใจให้ fail ก่อนเชื่อ
 - **ทดสอบหลัง deploy ยิง POST ไปที่ URL ของเราเองเท่านั้น** ห้ามแตะ `flood-api.rooptanjai.com`
