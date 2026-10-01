@@ -11,6 +11,7 @@ const FILES: Record<string, { file: string; type: string }> = {
   "/": { file: "index.html", type: "text/html; charset=utf-8" },
   "/app.js": { file: "app.js", type: "text/javascript; charset=utf-8" },
   "/demo.js": { file: "demo.js", type: "text/javascript; charset=utf-8" },
+  "/logic.js": { file: "logic.js", type: "text/javascript; charset=utf-8" },
   // Noto Sans Thai (SIL OFL 1.1, public/fonts/OFL.txt), hosted here so no font request leaves the site.
   "/fonts/noto-sans-thai-thai.woff2": { file: "fonts/noto-sans-thai-thai.woff2", type: "font/woff2" },
   "/fonts/noto-sans-thai-latin.woff2": { file: "fonts/noto-sans-thai-latin.woff2", type: "font/woff2" },
