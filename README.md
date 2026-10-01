@@ -74,7 +74,7 @@ pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/thaila
   --bbox=97.30,5.60,105.70,20.50 --maxzoom=10
 ```
 
-ถ้าเปลี่ยน `bangkok.pmtiles` ต้องอัปโหลดใหม่ที่ R2 ด้วย (ดู [คู่มือ deploy](docs/deploy-cloudflare.md) ขั้น 3)
+ถ้าเปลี่ยน `bangkok.pmtiles` ต้องอัปโหลดใหม่ที่ R2 ด้วย (ดู [คู่มือ deploy](DEPLOY.md) ขั้น 3)
 
 **เส้นแบ่งจังหวัดและอำเภอ** (`public/data/basin-*.geojson`) และรายชื่ออำเภอ (`data/districts-th.json`) ไฟล์ต้นทางใหญ่ราว 440 MB จึงไม่อยู่ใน git
 ดาวน์โหลด `tha_admin_boundaries.geojson.zip` จาก HDX แตกไฟล์ แล้วรัน
@@ -99,7 +99,7 @@ glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติ�
 แอปนี้ deploy เป็น **demo สำหรับสอน** บน Cloudflare Workers (Free plan) ได้ URL แบบ `https://namthuam.<subdomain>.workers.dev`
 ไม่ประชาสัมพันธ์ให้ประชาชน ข้อมูลยังเป็นข้อมูลสมมติ
 
-**👉 ทำตาม [คู่มือ deploy ทีละขั้น](docs/deploy-cloudflare.md)** ตั้งแต่สมัครบัญชีจนได้ URL ทำใน dashboard ทั้งหมด ไม่ต้องใช้ CLI หรือ API token ใช้เวลาราว 20–30 นาที
+**👉 ทำตาม [คู่มือ deploy ทีละขั้น](DEPLOY.md)** ตั้งแต่สมัครบัญชีจนได้ URL ทำใน dashboard ทั้งหมด ไม่ต้องใช้ CLI หรือ API token ใช้เวลาราว 20–30 นาที
 
 สรุปสั้นๆ ว่าทำงานอย่างไร
 
@@ -153,7 +153,7 @@ push main → Workers Builds: lint → test → deploy → URL เดิมอ�
 | ---- | ------- |
 | `docs/intent/`, `docs/specs/`, `docs/plans/` | intent, spec และแผนของฟีเจอร์รายงาน |
 | `docs/adr/` | การตัดสินใจที่ย้อนยาก (แผนที่, NFKC, Cloudflare) |
-| `docs/deploy-cloudflare.md` | คู่มือ deploy ขึ้น Cloudflare |
+| `DEPLOY.md` | คู่มือ deploy ขึ้น Cloudflare |
 | `tests/` | test ด้วย vitest |
 
 กติกาที่ใช้ทั้ง repo

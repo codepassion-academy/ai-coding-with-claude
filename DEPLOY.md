@@ -5,7 +5,7 @@
 > **เป็น demo สำหรับสอนเท่านั้น** ข้อมูลเป็นข้อมูลสมมติ ไม่ใช่ระบบเตือนภัย ไม่ประชาสัมพันธ์ URL ให้ประชาชน (ADR 0003)
 > ทดสอบส่งรายงานไปที่ URL ของตัวเองเท่านั้น **ห้าม POST ไปที่ `flood-api.rooptanjai.com`**
 
-ทำไมออกแบบแบบนี้ ดู [ADR 0003](adr/0003-cloudflare-hosting.md) ภาพรวมดู [แผนภาพ](diagrams/cloudflare-architecture.html)
+ทำไมออกแบบแบบนี้ ดู [ADR 0003](docs/adr/0003-cloudflare-hosting.md) ภาพรวมดู [แผนภาพ](docs/diagrams/cloudflare-architecture.html)
 
 ชื่อเมนูใน dashboard อ้างอิงหน้าจอของ Cloudflare ณ ตุลาคม 2026 ถ้าคำบนจอต่างไปเล็กน้อย ให้หาเมนูที่ความหมายเดียวกัน
 
@@ -181,7 +181,7 @@ push main → Workers Builds: npm ci → lint → test → wrangler deploy → U
 - Durable Object: 100,000 request และเขียน 100,000 แถวต่อวัน
 - เกินเพดานแล้ว request ล้มจนรีเซ็ตเวลา 07:00 น. (00:00 UTC) ไม่มีค่าใช้จ่ายเพิ่มเอง
 
-ตัวเลขและที่มาอยู่ใน [research notes](research/cloudflare-workers-hosting.md)
+ตัวเลขและที่มาอยู่ใน [research notes](docs/research/cloudflare-workers-hosting.md)
 
 ## ลองบนเครื่องด้วย workerd จริง (ไม่ต้องลง package)
 
