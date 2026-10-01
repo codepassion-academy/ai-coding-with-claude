@@ -1,6 +1,6 @@
 # 03 · สถานการณ์จำลอง: slider, flow line, flood areas, on-canvas banner
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Safety rules 1–3; Scenario)
 Blocked by: 01, 02
 

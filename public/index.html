@@ -70,6 +70,20 @@
     <section class="north" aria-labelledby="north-h" data-tab="north" hidden>
       <div class="section-head"><h2 id="north-h">ลุ่มน้ำเจ้าพระยา</h2></div>
       <p class="lead">จังหวัดและอำเภอตั้งแต่นครสวรรค์ลงมาถึงกรุงเทพฯ ซูมเข้าเพื่อดูชื่ออำเภอ</p>
+      <div class="section-head scenario-head">
+        <h3 id="scenario-h">สถานการณ์จำลอง</h3>
+        <button class="toggle" id="scenario-toggle" type="button" aria-pressed="false" aria-controls="scenario-panel">
+          <span class="switch" aria-hidden="true"></span>เปิดดู
+        </button>
+      </div>
+      <div class="scenario" id="scenario-panel" hidden>
+        <p class="scenario-label" id="scenario-label">ข้อมูลจำลอง · ไม่ใช่การพยากรณ์</p>
+        <label class="scenario-time" for="scenario-t">เวลาหลังเขื่อนปล่อยน้ำ <output id="scenario-t-out" for="scenario-t">T+0 ชม.</output></label>
+        <input id="scenario-t" type="range" min="0" max="108" step="6" value="0">
+        <ul class="releases" id="scenario-releases" aria-label="การระบายน้ำในสถานการณ์จำลอง"></ul>
+        <p class="fineprint" id="scenario-note"></p>
+      </div>
+
       <h3>ข้อมูลน้ำจากหน่วยงานทางการ</h3>
       <ul class="official">
         <li><a href="https://www.rid.go.th/" target="_blank" rel="noopener">กรมชลประทาน</a><span>น้ำในเขื่อนและการระบายน้ำ</span></li>

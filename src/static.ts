@@ -24,6 +24,8 @@ const FILES: Record<string, { file: string; type: string }> = {
   "/data/basin-districts.geojson": { file: "data/basin-districts.geojson", type: "application/geo+json" },
   // Real เขื่อน as reference points, no release figures (north-water 02).
   "/data/dams.geojson": { file: "data/dams.geojson", type: "application/geo+json" },
+  // The one hand-authored สถานการณ์จำลอง (north-water 03). A static file: the scenario never touches the API.
+  "/data/scenarios/chao-phraya.json": { file: "data/scenarios/chao-phraya.json", type: "application/json" },
   ...vendoredFiles()
 }
 
