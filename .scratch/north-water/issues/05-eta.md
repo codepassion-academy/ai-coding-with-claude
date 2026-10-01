@@ -1,6 +1,6 @@
 # 05 · ETA calculator (scenario only)
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Safety rule 6; ETA)
 Blocked by: 03
 

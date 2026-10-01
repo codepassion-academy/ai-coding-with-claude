@@ -632,3 +632,11 @@ label, legend { font-size: 13px; font-weight: 600; padding: 0; }
 .pin-arriving { outline: 2px dashed var(--accent); outline-offset: 2px; }
 .arriving-count { margin: 8px 0 14px; }
 #arriving-open { margin-top: 2px; }
+
+/* ETA (north-water 05) */
+.eta { display: grid; gap: 6px; padding-top: 8px; border-top: 1px dashed var(--notice-line); }
+.eta label { font-size: 12.5px; color: var(--muted); }
+.eta select { width: 100%; }
+.eta-result { margin: 0; color: var(--fg); font-size: 13px; line-height: 1.6; font-variant-numeric: tabular-nums; }
+.eta-result:empty { display: none; }
+.pin-eta { width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 3px solid var(--fg); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 35%, transparent); }

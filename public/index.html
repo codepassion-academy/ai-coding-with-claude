@@ -86,6 +86,12 @@
         <label class="scenario-time" for="scenario-t">เวลาหลังเขื่อนปล่อยน้ำ <output id="scenario-t-out" for="scenario-t">T+0 ชม.</output></label>
         <input id="scenario-t" type="range" min="0" max="108" step="6" value="0">
         <ul class="releases" id="scenario-releases" aria-label="การระบายน้ำในสถานการณ์จำลอง"></ul>
+        <div class="eta">
+          <label for="eta-place">น้ำจะมาถึงเมื่อไร (ในสถานการณ์จำลอง)</label>
+          <select id="eta-place"><option value="">เลือกจุด หรือแตะบนแผนที่</option></select>
+          <p class="eta-result" id="eta-result" aria-live="polite"></p>
+          <p class="hint">คำนวณในเครื่องของคุณเท่านั้น ตำแหน่งที่เลือกไม่ถูกส่งไปไหน</p>
+        </div>
         <p class="fineprint" id="scenario-note"></p>
       </div>
 
