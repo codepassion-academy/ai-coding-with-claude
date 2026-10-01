@@ -255,7 +255,7 @@ describe("age, order and fields in userReports (RPT-REQ-011)", () => {
   it("AC7: each userReport has exactly the public fields, and the POST report matches", () => {
     const { ctx } = setup()
     const posted = (handle("POST", "/districts/lat-phrao/reports", valid, ctx).body as PostBody).report
-    const fields = ["id", "source", "verified", "label", "landmark", "depthLevel", "depthCm", "seenAt", "ageMinutes", "ageLabel", "confirmations"]
+    const fields = ["id", "source", "verified", "label", "landmark", "depthLevel", "depthCm", "seenAt", "ageMinutes", "ageLabel", "confirmations", "kind"]
     const [shown] = get(ctx)
     expect(Object.keys(shown ?? {}).sort()).toEqual([...fields].sort())
     expect(posted).toEqual(shown)

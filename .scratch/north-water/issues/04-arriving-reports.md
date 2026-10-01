@@ -1,6 +1,6 @@
 # 04 · "น้ำกำลังมา" reports
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Reports)
 Blocked by: 01
 

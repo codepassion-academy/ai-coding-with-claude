@@ -39,7 +39,12 @@
     // The สถานการณ์จำลอง: off until the viewer opens it, loaded on first use, scrubbed by T+hours.
     scenario: null,
     scenarioOn: false,
-    t: 0
+    t: 0,
+    // Basin จังหวัด with their อำเภอ (GET /basin, once) and every active basin รายงาน (GET /basin/reports).
+    basin: [],
+    basinReports: [],
+    // Which kind the report form sends: "flooded" from the flood tab, "arriving" from the north tab.
+    formKind: "flooded"
   }
   const pins = new Map()
   let map = null
@@ -130,6 +135,7 @@
     state.stations = stations
     state.realReports = reports
     await loadDams().catch(() => {})
+    await loadBasin().catch(() => {})
     mergeReports()
     if (state.selected && !findItem(state.selected)) {
       state.selected = null
@@ -226,7 +232,11 @@
     if (!map) return
     for (const { marker } of pins.values()) marker.remove()
     pins.clear()
-    if (state.tab === "north") return renderDamPins()
+    if (state.tab === "north") {
+      renderDamPins()
+      renderArrivingPins()
+      return
+    }
     const items = [...state.stations.filter(inFilter), ...[...state.reports].reverse().filter(inFilter)]
     for (const item of items) {
       const b = el("button", "pin")
@@ -271,6 +281,45 @@
       const marker = new maplibregl.Marker({ element: b, anchor: "center" }).setLngLat(geometry.coordinates).addTo(map)
       pins.set(`dam:${properties.id}`, { marker, el: b })
     }
+  }
+
+  /** อำเภอ centres for the whole basin, so an arriving รายงาน gets a stable spot near its อำเภอ. */
+  const basinCentres = () => Object.fromEntries(state.basin.flatMap((p) => p.districts.map((d) => [d.id, d.centre])))
+  const districtNameOf = (id) => state.basin.flatMap((p) => p.districts).find((d) => d.id === id)?.nameTh ?? id
+
+  /** "น้ำกำลังมา" reports on the north tab, placed near their อำเภอ centre like every รายงาน (RPT-REQ-013). */
+  function renderArrivingPins() {
+    const centres = basinCentres()
+    const arriving = state.basinReports.filter((r) => r.kind === "arriving")
+    $("arriving-count").textContent = arriving.length ? `มีคนแจ้งน้ำกำลังมา ${arriving.length} จุด ใน 6 ชั่วโมงล่าสุด` : "ยังไม่มีใครแจ้งน้ำกำลังมาใน 6 ชั่วโมงล่าสุด"
+    for (const r of arriving) {
+      const at = L.place(centres, r.districtId, r.landmark.toLowerCase())
+      const b = el("button", `pin pin-report pin-arriving ${r.depthLevel}`)
+      b.type = "button"
+      if (r.confirmations > 1) b.append(el("span", null, String(Math.min(r.confirmations, 99))))
+      b.setAttribute("aria-label", `น้ำกำลังมา ${r.landmark} ${districtNameOf(r.districtId)} ${r.ageLabel}`)
+      b.addEventListener("click", (e) => {
+        e.stopPropagation()
+        closePopup()
+        popup = new maplibregl.Popup({ offset: 20, maxWidth: "280px" }).setLngLat(at).setDOMContent(arrivingContent(r)).addTo(map)
+      })
+      const marker = new maplibregl.Marker({ element: b, anchor: "center" }).setLngLat(at).addTo(map)
+      pins.set(`arriving:${r.id}`, { marker, el: b })
+    }
+  }
+
+  function arrivingContent(r) {
+    const box = el("div", "popup")
+    const head = el("div", "title")
+    head.append(staff(r.depthLevel), el("span", "landmark", r.landmark))
+    const meta = el("div", "meta")
+    meta.append(el("span", "depth-label", depthText(r.depthLevel, r.depthCm)), el("span", "dot"), el("span", null, r.ageLabel))
+    const confirm = el("span", "confirm")
+    confirm.append(icon(ICON_PEOPLE), confirmText(r.confirmations))
+    const foot = el("div", "foot")
+    foot.append(confirm, el("span", null, `${r.label} · ตำแหน่งโดยประมาณ`))
+    box.append(el("span", "kind", `น้ำกำลังมา · ${districtNameOf(r.districtId)}`), head, meta, foot)
+    return box
   }
 
   /** The dam's release at the current T, only while the สถานการณ์จำลอง is on; otherwise none (safety rule 4). */
@@ -379,6 +428,15 @@
     a.rel = "noopener"
     box.append(el("span", "kind", "เขื่อน · จุดอ้างอิง"), el("span", "landmark", title), el("span", "meta", note), a)
     return box
+  }
+
+  async function loadBasin() {
+    if (!state.basin.length) {
+      const res = await api("/basin")
+      if (res.status === 200 && res.body) state.basin = res.body.provinces
+    }
+    const reports = await api("/basin/reports")
+    if (reports.status === 200 && reports.body) state.basinReports = reports.body.reports
   }
 
   async function loadDams() {
@@ -656,19 +714,28 @@
   const form = $("report-form")
   const landmark = $("f-landmark")
 
-  function openForm() {
+  function openForm(kind = "flooded") {
+    state.formKind = kind
+    const arriving = kind === "arriving"
+    $("form-h").textContent = arriving ? "แจ้งน้ำกำลังมา" : "แจ้งจุดน้ำท่วม"
+    $("f-district-label").textContent = arriving ? "จังหวัดและอำเภอ" : "เขต"
     const select = $("f-district")
-    const current = state.filter !== "all" ? state.filter : ""
-    const placeholder = el("option", null, "เลือกเขต")
+    const current = !arriving && state.filter !== "all" ? state.filter : ""
+    const placeholder = el("option", null, arriving ? "เลือกอำเภอ" : "เลือกเขต")
     placeholder.value = ""
-    select.replaceChildren(
-      placeholder,
-      ...state.districts.map((d) => {
-        const o = el("option", null, d.nameTh)
-        o.value = d.id
-        return o
-      })
-    )
+    const option = (d) => {
+      const o = el("option", null, d.nameTh)
+      o.value = d.id
+      return o
+    }
+    // จังหวัด → อำเภอ: one optgroup per basin province (north-water 04).
+    const groups = state.basin.map((p) => {
+      const g = document.createElement("optgroup")
+      g.label = p.nameTh
+      g.append(...p.districts.map(option))
+      return g
+    })
+    select.replaceChildren(placeholder, ...(arriving ? groups : state.districts.map(option)))
     select.value = current
     $("f-error").hidden = true
     dialog.showModal()
@@ -699,12 +766,14 @@
   form.addEventListener("submit", async (e) => {
     e.preventDefault()
     const districtId = $("f-district").value
-    if (!districtId) return formError("เลือกเขตก่อนส่ง")
+    if (!districtId) return formError(state.formKind === "arriving" ? "เลือกอำเภอก่อนส่ง" : "เลือกเขตก่อนส่ง")
     const minutesAgo = Number($("f-seen").value)
     const body = {
       landmark: landmark.value,
       depth: new FormData(form).get("depth"),
-      seenAt: new Date(Date.now() - minutesAgo * 60 * 1000).toISOString()
+      seenAt: new Date(Date.now() - minutesAgo * 60 * 1000).toISOString(),
+      // Only the north tab sends a kind; a flood-tab report stays exactly as before (missing means flooded).
+      ...(state.formKind === "arriving" ? { kind: "arriving" } : {})
     }
     $("f-submit").disabled = true
     let res
@@ -730,6 +799,16 @@
     landmark.dispatchEvent(new Event("input"))
     const report = res.body.report
     toast(res.body.merged ? `รวมกับรายงานเดิม ตอนนี้ยืนยัน ${report.confirmations} คน` : "บันทึกแล้ว ขอบคุณที่แจ้ง")
+    if (state.formKind === "arriving") {
+      // Not in the Bangkok list: reload the basin reports and show the new pin.
+      try {
+        await load()
+        if (map) map.flyTo({ center: L.place(basinCentres(), districtId, report.landmark.toLowerCase()), zoom: Math.max(map.getZoom(), 10) })
+      } catch {
+        toast("บันทึกแล้ว แต่โหลดแผนที่ใหม่ไม่ได้ จะลองอีกครั้งใน 1 นาที")
+      }
+      return
+    }
     state.filter = "all"
     try {
       await load()
@@ -739,7 +818,8 @@
     }
   })
 
-  $("report-open").addEventListener("click", openForm)
+  $("report-open").addEventListener("click", () => openForm("flooded"))
+  $("arriving-open").addEventListener("click", () => openForm("arriving"))
   $("demo-toggle").addEventListener("click", () => {
     state.demo = !state.demo
     if (!state.demo && state.selected?.startsWith("demo:")) {

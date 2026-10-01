@@ -3,6 +3,9 @@ import { createRateLimiter, type RateLimiter } from "./rate-limit.ts"
 import { toBangkokIso } from "./time.ts"
 
 export type DepthLevel = "ankle" | "knee" | "waist"
+/** `flooded`: water is here. `arriving`: water is on its way here (north-water 04). Missing means `flooded`. */
+export type ReportKind = "flooded" | "arriving"
+const KINDS: readonly ReportKind[] = ["flooded", "arriving"]
 export const DEPTH_CM: Record<DepthLevel, number> = { ankle: 10, knee: 50, waist: 100 }
 
 export const USER_REPORT_LABEL = "ผู้ใช้รายงาน ยังไม่ยืนยัน"
@@ -27,6 +30,7 @@ export type Report = {
   depthCm: number
   seenAt: Date
   confirmations: number
+  kind: ReportKind
 }
 
 export type PublicReport = {
@@ -41,6 +45,7 @@ export type PublicReport = {
   ageMinutes: number
   ageLabel: string
   confirmations: number
+  kind: ReportKind
 }
 
 export type SubmitResult =
@@ -53,13 +58,13 @@ export type ReportStore = {
   size(): number
 }
 
-const FIELDS: readonly string[] = ["landmark", "depth", "seenAt"]
+const FIELDS: readonly string[] = ["landmark", "depth", "seenAt", "kind"]
 
 /** Nothing but mask stars and spaces left after masking (RPT-REQ-005). */
 const ONLY_MASK = /^[*\s]*$/u
 
 type Invalid = { ok: false; status: 400; error: string; field?: string }
-type ValidInput = { ok: true; landmark: string; depthLevel: DepthLevel; seenAt: Date }
+type ValidInput = { ok: true; landmark: string; depthLevel: DepthLevel; seenAt: Date; kind: ReportKind }
 
 function invalid(error: string, field?: string): Invalid {
   return field ? { ok: false, status: 400, error, field } : { ok: false, status: 400, error }
@@ -142,12 +147,19 @@ export function validateReportInput(input: unknown, now: Date): ValidInput | Inv
   if (seenAt.getTime() > now.getTime()) return invalid("seen_at_future", "seenAt")
   if (seenAt.getTime() < now.getTime() - MAX_BACKDATE_MS) return invalid("seen_at_too_old", "seenAt")
 
-  return { ok: true, landmark, depthLevel: depth, seenAt }
+  const rawKind = field("kind")
+  const kind = rawKind === undefined ? "flooded" : KINDS.find((k) => k === rawKind)
+  if (!kind) return invalid("kind_invalid", "kind")
+
+  return { ok: true, landmark, depthLevel: depth, seenAt, kind }
 }
 
-/** Dedupe key (RPT-REQ-010). `landmarkKey` comes from the masked landmark, so phones never reach it. */
-function dedupeKey(districtId: string, landmarkKey: string): string {
-  return districtId + "\u0000" + landmarkKey
+/**
+ * Dedupe key (RPT-REQ-010). `landmarkKey` comes from the masked landmark, so phones never reach it. The kind is
+ * part of it, so "water arriving" never merges into "flooded" at the same spot (north-water 04).
+ */
+function dedupeKey(districtId: string, landmarkKey: string, kind: ReportKind): string {
+  return districtId + "\u0000" + landmarkKey + "\u0000" + kind
 }
 
 /** Each store gets its own limiter unless one is passed in, so tests never share quota (RPT-REQ-017 AC4). */
@@ -173,7 +185,7 @@ export function createReportStore(limiter: RateLimiter = createRateLimiter()): R
       if (!valid.ok) return valid
 
       const landmarkKey = valid.landmark.toLowerCase()
-      const key = dedupeKey(districtId, landmarkKey)
+      const key = dedupeKey(districtId, landmarkKey, valid.kind)
       const existing = reports.get(key)
       if (existing) {
         existing.confirmations += 1
@@ -198,7 +210,8 @@ export function createReportStore(limiter: RateLimiter = createRateLimiter()): R
         depthLevel: valid.depthLevel,
         depthCm: DEPTH_CM[valid.depthLevel],
         seenAt: valid.seenAt,
-        confirmations: 1
+        confirmations: 1,
+        kind: valid.kind
       }
       reports.set(key, report)
       limiter.record(clientKey, now)
@@ -237,6 +250,7 @@ export function toPublicReport(r: Report, now: Date): PublicReport {
     seenAt: toBangkokIso(r.seenAt),
     ageMinutes,
     ageLabel: ageLabelTh(ageMinutes),
-    confirmations: r.confirmations
+    confirmations: r.confirmations,
+    kind: r.kind
   }
 }

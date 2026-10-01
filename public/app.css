@@ -627,3 +627,8 @@ label, legend { font-size: 13px; font-weight: 600; padding: 0; }
 .releases { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 12.5px; }
 .releases li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); }
 .releases b { color: var(--fg); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* "น้ำกำลังมา" reports (north-water 04): same depth colours as รายงาน, dashed ring so they read as "on its way". */
+.pin-arriving { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.arriving-count { margin: 8px 0 14px; }
+#arriving-open { margin-top: 2px; }

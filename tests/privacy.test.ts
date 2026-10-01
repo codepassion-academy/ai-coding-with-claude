@@ -125,7 +125,7 @@ describe("stored and returned data (RPT-REQ-013 AC2)", () => {
     expect(stored.length).toBeGreaterThan(0)
     for (const report of stored) {
       expect(Object.keys(report).sort()).toEqual(
-        ["confirmations", "depthCm", "depthLevel", "districtId", "id", "landmark", "landmarkKey", "seenAt"].sort()
+        ["confirmations", "depthCm", "depthLevel", "districtId", "id", "kind", "landmark", "landmarkKey", "seenAt"].sort()
       )
     }
   })

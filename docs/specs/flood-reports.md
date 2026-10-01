@@ -235,6 +235,7 @@ export const DEPTH_CM: Record<DepthLevel, number> = { ankle: 10, knee: 50, waist
 export type Report = {
   id: string            // crypto.randomUUID()
   districtId: string    // P-code ใน districts เช่น TH1038 (north-water 01)
+  kind: "flooded" | "arriving"  // north-water 04; เป็นส่วนหนึ่งของ dedupe key คู่กับ districtId และ landmarkKey
   landmark: string      // ผ่าน normalize + mask แล้ว ใช้แสดงผล
   landmarkKey: string   // landmark.toLowerCase() ใช้ dedupe
   depthLevel: DepthLevel
@@ -282,6 +283,9 @@ Sliding-window log ต่อ key เก็บแค่ timestamp (ตัวเ�
 | `POST /districts/:id/reports` | **ใหม่** | `{ landmark, depth, seenAt }` | `201`/`200` `{ notice, merged, report: PublicReport }` |
 | `GET /districts/:id` | **เปลี่ยน (เพิ่ม key)** | – | `{ notice, district, stations, userReports: PublicReport[] }`; `404` ตอนนี้ `{ notice, error }` |
 | route อื่นที่ไม่ตรง | **เปลี่ยน** | – | `404` `{ notice, error: "not found" }` |
+| `POST /districts/:id/reports` (north-water 04) | **เปลี่ยน** | เพิ่ม `kind` (ไม่บังคับ) `"flooded"` \| `"arriving"` ไม่ส่งถือเป็น `"flooded"` | `report.kind`; `:id` รับอำเภอ/เขตใดก็ได้ในลุ่มน้ำเจ้าพระยา (P-code) ค่าอื่นได้ `400` `kind_invalid` |
+| `GET /basin` (north-water 04) | **ใหม่** | – | `{ notice, provinces: [{ id, nameTh, nameEn, districts: [{ id, nameTh, nameEn, centre }] }] }` 12 จังหวัดในลุ่มน้ำ |
+| `GET /basin/reports` (north-water 04) | **ใหม่** | – | `{ notice, reports: (PublicReport & { districtId })[] }` ทุกรายงานที่ยังไม่หมดอายุในลุ่มน้ำ ไม่มีพิกัด |
 | `GET /districts` | **เปลี่ยน (เพิ่ม field)** (flood-map) | – | แต่ละเขตมี `centre: [lon, lat]` (กึ่งกลางเขต) ต่อท้าย field เดิม `GET /districts/:id` → `district` ก็มี `centre` เช่นกัน เป็นพิกัดของเขต ไม่ใช่ของผู้รายงาน (REQ-013) |
 
 รหัสความผิดพลาดของ `POST`
