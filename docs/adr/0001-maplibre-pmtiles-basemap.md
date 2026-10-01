@@ -26,3 +26,7 @@ status: accepted
 แท็บ น้ำเหนืออยู่ไหน ต้องเห็นทั้งประเทศ จึงเพิ่มไฟล์ PMTiles ที่สอง `public/tiles/thailand.pmtiles` ตัดทั้งประเทศไทยที่ maxzoom 10 (ดูคำสั่งใน README) ใช้คู่กับไฟล์กรุงเทพฯ เดิม หลักการเดิมทุกข้อยังใช้: host เอง ไม่อยู่ใน git ไม่โหลดจากโดเมนอื่น และแสดง attribution ของ OpenStreetMap
 
 basemap ของ Protomaps ไม่มีเส้นแบ่งเขตระดับอำเภอ เส้นแบ่งจังหวัดและอำเภอของลุ่มน้ำเจ้าพระยาจึงมาจาก HDX COD-AB Thailand (กรมแผนที่ทหาร / OCHA, CC BY-IGO) ผ่าน `scripts/build-districts.mjs` ซึ่งลดรายละเอียดเส้นเหลือราว 270 KB และเสิร์ฟจาก server นี้เช่นกัน ต้องแสดง attribution ของ COD-AB บนแผนที่และในแท็บ
+
+## Amendment 2026-10-01: tiles อยู่ใน git และเสิร์ฟจาก R2 บน Cloudflare (ADR 0003)
+
+`public/tiles/bangkok.pmtiles` ถูก commit เข้า git แล้ว (#19) และตัดสินให้อยู่ใน git ต่อ ข้อ "ไม่อยู่ใน git" ข้างบนจึงไม่ใช้กับไฟล์นี้อีก ถ้าจะ deploy `thailand.pmtiles` ด้วยต้อง commit เข้า git เช่นกัน บน Cloudflare ไฟล์ tiles เกินเพดาน 25 MiB ของ Static Assets จึงเก็บใน R2 และให้ Worker ตอบ Range request บน origin เดียวกับหน้าเว็บ หลักการ "ไม่โหลดจากโดเมนอื่น" ยังใช้เหมือนเดิม

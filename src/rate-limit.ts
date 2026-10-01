@@ -8,14 +8,20 @@ export type RateLimiter = {
   prune(now: Date): void
   /** Number of keys that still have entries in the window. */
   size(): number
+  /** Every key with its timestamps, so a Durable Object can save and restore the limiter (ADR 0003). */
+  entries(): [string, number[]][]
 }
 
 /**
  * Sliding-window log per client key (RPT-REQ-008). Keeps only timestamps as numbers, in memory.
  * `check` never records; the caller records only reports it accepted (A2).
  */
-export function createRateLimiter(max = RATE_LIMIT_MAX, windowMs = RATE_LIMIT_WINDOW_MS): RateLimiter {
-  const logs = new Map<string, number[]>()
+export function createRateLimiter(
+  max = RATE_LIMIT_MAX,
+  windowMs = RATE_LIMIT_WINDOW_MS,
+  saved: Iterable<[string, number[]]> = []
+): RateLimiter {
+  const logs = new Map<string, number[]>([...saved].map(([key, log]) => [key, [...log]]))
 
   /** Entries still inside the window; an entry exactly `windowMs` old has left it (AC4). */
   function inWindow(key: string, now: Date): number[] {
@@ -44,6 +50,9 @@ export function createRateLimiter(max = RATE_LIMIT_MAX, windowMs = RATE_LIMIT_WI
     },
     size() {
       return logs.size
+    },
+    entries() {
+      return [...logs].map(([key, log]) => [key, [...log]])
     }
   }
 }

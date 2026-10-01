@@ -48,7 +48,7 @@ curl -X POST localhost:3000/districts/lat-phrao/reports \
 - ตัวแผนที่ใช้ MapLibre GL JS กับไฟล์ PMTiles ที่ host เอง (ดู [ADR 0001](docs/adr/0001-maplibre-pmtiles-basemap.md))
   ไฟล์ทุกอย่างของแผนที่ (MapLibre, pmtiles, basemaps, glyphs, sprites) อยู่ใน `public/vendor/` และเสิร์ฟจาก server นี้ หน้าเว็บไม่ดึงอะไรจากเว็บอื่น
 - **ตำแหน่งหมุดเป็นค่าประมาณจากเขต** API ไม่เก็บพิกัดของผู้รายงาน (spec §5, RPT-REQ-013)
-- ไฟล์แผนที่พื้นหลังไม่อยู่ใน git ถ้ายังไม่มี หน้าเว็บยังแสดงหมุดบนพื้นเรียบได้ อยากได้ถนนและชื่อสถานที่ให้สร้างไฟล์เอง:
+- ไฟล์แผนที่กรุงเทพฯ `public/tiles/bangkok.pmtiles` อยู่ใน git แล้ว (ADR 0001 amendment) ส่วนไฟล์ทั้งประเทศยังไม่อยู่ ถ้าไม่มีไฟล์ หน้าเว็บยังแสดงหมุดบนพื้นเรียบได้ อยากสร้างใหม่ให้ใช้:
 
 ```bash
 # ติดตั้ง pmtiles CLI: https://docs.protomaps.com/pmtiles/cli
@@ -81,6 +81,33 @@ UPDATE=1 scripts/vendor-map.sh   # ใช้เฉพาะตอนเปลี
 
 glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติน ไทย และเครื่องหมายวรรคตอน ชื่อสถานที่ภาษาอื่นจึงไม่แสดง (ยอมรับแล้วใน spec)
 
+## Deploy ขึ้น Cloudflare (demo)
+
+URL บน `*.workers.dev` เป็น **demo สำหรับสอน** ไม่ประชาสัมพันธ์ให้ประชาชน ข้อมูลยังเป็นข้อมูลสมมติ (ดู [ADR 0003](docs/adr/0003-cloudflare-hosting.md))
+
+- push เข้า `main` → Workers Builds ของ Cloudflare รัน `npm run lint` และ `npm test` แล้วจึง `wrangler deploy` (ตั้งใน dashboard ไม่มีไฟล์ CI ใน repo)
+- ไฟล์ tiles ใหญ่เกิน 25 MiB ของ Static Assets จึงอยู่ใน R2 bucket `namthuam-tiles` อัปโหลดด้วยมือเมื่อไฟล์เปลี่ยน
+- รายงานและ rate limit อยู่ใน Durable Object เดียว (SQLite) client key มาจาก `CF-Connecting-IP` แล้ว HMAC ไม่เก็บ IP
+
+ตั้งค่าครั้งแรก ทำใน [dashboard](https://dash.cloudflare.com) ทั้งหมด ไม่ต้องใช้ CLI หรือ API token
+
+1. **R2** → Create bucket ชื่อ `namthuam-tiles` → เปิด bucket → Upload `public/tiles/bangkok.pmtiles` (ต้องมี bucket ก่อน deploy ครั้งแรก)
+2. **Workers & Pages** → Create → Import a repository → เลือก `codepassion-academy/ai-coding-with-claude`
+   - Project name: `namthuam` (ต้องตรงกับ `name` ใน `wrangler.jsonc`)
+   - Build command: `npm ci && npm run lint && npm test`
+   - Deploy command: `npx wrangler@4.145.0 deploy`
+   - Production branch: `main` ปิด builds for non-production branches
+3. Worker `namthuam` → **Settings → Variables and Secrets** → Add → Type *Secret* ชื่อ `CLIENT_KEY_SECRET` ค่าสุ่มยาว (เช่นจาก `openssl rand -hex 32`) ก่อนตั้งค่านี้ GET ใช้ได้ แต่ POST รายงานจะได้ 500
+
+ลองบนเครื่องด้วย workerd จริง (ไม่ต้องลง package)
+
+```bash
+npx wrangler@4.145.0 r2 object put namthuam-tiles/bangkok.pmtiles --file public/tiles/bangkok.pmtiles --local
+npx wrangler@4.145.0 dev --var CLIENT_KEY_SECRET:dev-only
+```
+
+> ทดสอบหลัง deploy ยิง POST ไปที่ URL ของเราเองเท่านั้น ห้ามแตะ `flood-api.rooptanjai.com`
+
 ## มีอะไรใน repo
 
 | ไฟล์ | หน้าที่ |
@@ -93,11 +120,15 @@ glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติ�
 | `src/reports.ts` | รายงานจากคนในพื้นที่: ตรวจข้อมูล ปิดเบอร์โทร รวมรายงานซ้ำ หมดอายุ |
 | `src/rate-limit.ts` | จำกัด 5 รายงานต่อชั่วโมงต่อ client |
 | `src/read-body.ts` | อ่าน body ไม่เกิน 2048 byte |
-| `src/static.ts` | เสิร์ฟหน้าเว็บแผนที่ ไฟล์ tiles และไฟล์แผนที่ใน `public/vendor/` (รายการตายตัว) |
+| `src/static-files.ts` | รายการไฟล์หน้าเว็บที่ตายตัว, CSP, header และ byte range ใช้ร่วมกันทั้ง node และ Worker |
+| `src/static.ts` | เสิร์ฟไฟล์ในรายการจากดิสก์ (ตอนรันในเครื่อง) |
 | `scripts/build-districts.mjs` | สร้างรายชื่อและเส้นแบ่งจังหวัด/อำเภอในลุ่มน้ำเจ้าพระยาจาก HDX COD-AB |
 | `data/districts-th.json` | จังหวัดและอำเภอในลุ่มน้ำ พร้อม P-code ชื่อไทย และกึ่งกลาง |
 | `scripts/vendor-map.sh` | ดึงไฟล์แผนที่ที่ปักเวอร์ชันไว้ ตรวจกับ `public/vendor/SHA256SUMS` |
-| `src/server.ts` | HTTP server |
+| `src/server.ts` | HTTP server สำหรับรันในเครื่อง |
+| `src/worker.ts` | Cloudflare Worker: ไฟล์หน้าเว็บจาก Static Assets, tiles จาก R2, API ผ่าน Durable Object (ADR 0003) |
+| `src/reports-object.ts` | Durable Object ที่ถือรายงานและ rate limiter เก็บลง SQLite |
+| `wrangler.jsonc` | config ของ Cloudflare Workers (Workers Builds deploy ทุกครั้งที่ `main` เปลี่ยน) |
 | `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`), ข้อมูลจำลอง `demo.js` (เปิดด้วย `/?demo`) |
 | `public/fonts/` | Noto Sans Thai แบบ variable (SIL OFL 1.1, ดู `OFL.txt`) host เองไม่ดึงจาก Google Fonts |
 | `tests/` | test ด้วย vitest |

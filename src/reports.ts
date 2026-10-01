@@ -20,7 +20,7 @@ export const LANDMARK_MAX = 80
 // Rate limit constants live in rate-limit.ts to avoid an import cycle; re-exported so spec §2 names resolve here.
 export { RATE_LIMIT_MAX, RATE_LIMIT_WINDOW_MS } from "./rate-limit.ts"
 
-/** Kept in memory only. No IP, user agent, name, phone or coordinates (RPT-REQ-013). */
+/** Kept in memory, and on Cloudflare also saved by the Durable Object (ADR 0003). No IP, user agent, name, phone or coordinates (RPT-REQ-013). */
 export type Report = {
   id: string
   districtId: string
@@ -55,7 +55,17 @@ export type SubmitResult =
 export type ReportStore = {
   submit(input: unknown, districtId: string, clientKey: string, now: Date): SubmitResult
   activeIn(districtId: string, now: Date): Report[]
+  /** Every active report, newest first, after one purge. For callers that need many districts at once. */
+  active(now: Date): Report[]
   size(): number
+  /** Plain JSON of every report and the limiter, for the Durable Object to save (ADR 0003). */
+  snapshot(): StoreSnapshot
+}
+
+/** What a Durable Object saves. Same fields as `Report` (no IP), `seenAt` as epoch ms; limiter keys are HMACs there. */
+export type StoreSnapshot = {
+  reports: (Omit<Report, "seenAt"> & { seenAt: number })[]
+  limiter: [string, number[]][]
 }
 
 const FIELDS: readonly string[] = ["landmark", "depth", "seenAt", "kind"]
@@ -162,24 +172,35 @@ function dedupeKey(districtId: string, landmarkKey: string, kind: ReportKind): s
   return districtId + "\u0000" + landmarkKey + "\u0000" + kind
 }
 
-/** Each store gets its own limiter unless one is passed in, so tests never share quota (RPT-REQ-017 AC4). */
-export function createReportStore(limiter: RateLimiter = createRateLimiter()): ReportStore {
+function newestFirst(a: Report, b: Report): number {
+  return b.seenAt.getTime() - a.seenAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)
+}
+
+/**
+ * Each store gets its own limiter unless one is passed in, so tests never share quota (RPT-REQ-017 AC4).
+ * `saved` restores a snapshot; its limiter entries are used only when no limiter is passed in.
+ */
+export function createReportStore(limiter?: RateLimiter, saved?: StoreSnapshot): ReportStore {
+  const quota = limiter ?? createRateLimiter(undefined, undefined, saved?.limiter)
   const reports = new Map<string, Report>()
+  for (const r of saved?.reports ?? []) {
+    reports.set(dedupeKey(r.districtId, r.landmarkKey, r.kind), { ...r, seenAt: new Date(r.seenAt) })
+  }
 
   /** Lazy purge on every POST and GET (RPT-REQ-012): expired reports leave memory, no timer. */
   function purge(now: Date): void {
     for (const [key, report] of reports) {
       if (now.getTime() - report.seenAt.getTime() >= DISPLAY_TTL_MS) reports.delete(key)
     }
-    limiter.prune(now)
+    quota.prune(now)
   }
 
   return {
     submit(input, districtId, clientKey, now) {
       purge(now)
       // Quota before validation (RPT-REQ-008). Only accepted reports are recorded (A2).
-      const quota = limiter.check(clientKey, now)
-      if (!quota.allowed) return { ok: false, status: 429, error: "rate_limited", retryAfterSec: quota.retryAfterSec }
+      const allowed = quota.check(clientKey, now)
+      if (!allowed.allowed) return { ok: false, status: 429, error: "rate_limited", retryAfterSec: allowed.retryAfterSec }
 
       const valid = validateReportInput(input, now)
       if (!valid.ok) return valid
@@ -195,7 +216,7 @@ export function createReportStore(limiter: RateLimiter = createRateLimiter()): R
           existing.depthLevel = valid.depthLevel
           existing.depthCm = DEPTH_CM[valid.depthLevel]
         }
-        limiter.record(clientKey, now)
+        quota.record(clientKey, now)
         return { ok: true, merged: true, report: existing }
       }
 
@@ -214,17 +235,25 @@ export function createReportStore(limiter: RateLimiter = createRateLimiter()): R
         kind: valid.kind
       }
       reports.set(key, report)
-      limiter.record(clientKey, now)
+      quota.record(clientKey, now)
       return { ok: true, merged: false, report }
     },
     activeIn(districtId, now) {
       purge(now)
-      return [...reports.values()]
-        .filter((r) => r.districtId === districtId)
-        .sort((a, b) => b.seenAt.getTime() - a.seenAt.getTime() || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+      return [...reports.values()].filter((r) => r.districtId === districtId).sort(newestFirst)
+    },
+    active(now) {
+      purge(now)
+      return [...reports.values()].sort(newestFirst)
     },
     size() {
       return reports.size
+    },
+    snapshot() {
+      return {
+        reports: [...reports.values()].map((r) => ({ ...r, seenAt: r.seenAt.getTime() })),
+        limiter: quota.entries()
+      }
     }
   }
 }
