@@ -82,7 +82,7 @@ describe("web page (GET /)", () => {
   })
 
   it("the page scripts never set innerHTML, so report text cannot become markup", () => {
-    for (const file of ["app.js", "demo.js"]) {
+    for (const file of ["app.js", "demo.js", "logic.js"]) {
       const js = readFileSync(new URL(`../public/${file}`, import.meta.url), "utf8")
       expect(js, file).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|setHTML\(|document\.write/)
     }
@@ -90,6 +90,12 @@ describe("web page (GET /)", () => {
 
   it("serves the demo data script", async () => {
     const res = await fetch(`${await start()}/demo.js`)
+    expect(res.status).toBe(200)
+    expect(res.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
+  })
+
+  it("serves the page logic script", async () => {
+    const res = await fetch(`${await start()}/logic.js`)
     expect(res.status).toBe(200)
     expect(res.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
   })
