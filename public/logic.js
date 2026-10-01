@@ -74,5 +74,15 @@
   /** Which tab the URL asks for: น้ำเหนืออยู่ไหน at exactly `#/north`, น้ำท่วมไหม otherwise. */
   const tabFromHash = (hash) => (hash === "#/north" ? "north" : "flood")
 
-  window.NAMTUAM_LOGIC = { errorMessage, ageLabel, bangkokIso, mergeReports, inFilter, countByDepth, countByDistrict, place, positionOf, tabFromHash }
+  /**
+   * What a เขื่อน popup says. A real dam is a reference point: its name and a link to RID, never a release
+   * figure (north-water safety rule 4). Release numbers only ever come from the สถานการณ์จำลอง.
+   */
+  const damPopup = (dam) => ({
+    title: `เขื่อน${dam.nameTh}`,
+    note: "จุดอ้างอิง ดูปริมาณน้ำและการระบายน้ำจริงที่กรมชลประทาน",
+    link: { href: dam.rid, text: "กรมชลประทาน" }
+  })
+
+  window.NAMTUAM_LOGIC = { errorMessage, ageLabel, bangkokIso, mergeReports, inFilter, countByDepth, countByDistrict, place, positionOf, tabFromHash, damPopup }
 })()

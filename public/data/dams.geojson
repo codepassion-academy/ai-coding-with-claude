@@ -1,0 +1,6 @@
+{"type":"FeatureCollection","source":{"note":"Dam locations from Wikipedia coordinates (checked 2026-10-01). Reference points only: no release figures here (north-water safety rule 4)."},"features":[
+{"type":"Feature","properties":{"id":"bhumibol","nameTh":"ภูมิพล","nameEn":"Bhumibol","rid":"https://app.rid.go.th/reservoir/"},"geometry":{"type":"Point","coordinates":[98.9722,17.2425]}},
+{"type":"Feature","properties":{"id":"sirikit","nameTh":"สิริกิติ์","nameEn":"Sirikit","rid":"https://app.rid.go.th/reservoir/"},"geometry":{"type":"Point","coordinates":[100.5633,17.7639]}},
+{"type":"Feature","properties":{"id":"chao-phraya","nameTh":"เจ้าพระยา","nameEn":"Chao Phraya","rid":"https://www.rid.go.th/"},"geometry":{"type":"Point","coordinates":[100.18,15.1581]}},
+{"type":"Feature","properties":{"id":"pasak-jolasid","nameTh":"ป่าสักชลสิทธิ์","nameEn":"Pa Sak Jolasid","rid":"https://app.rid.go.th/reservoir/"},"geometry":{"type":"Point","coordinates":[101.0661,14.8614]}}
+]}
