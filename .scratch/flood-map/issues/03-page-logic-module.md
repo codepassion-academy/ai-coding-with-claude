@@ -1,6 +1,6 @@
 # 03 · DOM-free page logic module
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Page logic module)
 Blocked by: 02
 

@@ -1,6 +1,6 @@
 # 01 · Self-host every map asset
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Implementation Decisions › Map assets self-hosted; ADR 0001)
 Blocked by: none
 
