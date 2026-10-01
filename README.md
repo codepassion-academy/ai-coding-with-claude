@@ -67,3 +67,16 @@ curl localhost:3000/districts/lat-phrao
 git fetch --tags
 git switch -c my-try cp4-plan   # เริ่มทำต่อจากจุดที่ต้องการ
 ```
+
+## Demo ออนไลน์ (อ่านอย่างเดียว)
+
+`src/worker.ts` ห่อแอปที่เสร็จแล้วให้รันบน Cloudflare Workers เป็น demo สาธารณะ ข้อมูลเป็นรายงานสมมติที่สร้างใหม่ทุก request และ**ไม่รับการเขียน** (POST ได้ 405) เพื่อไม่ให้ endpoint สาธารณะเก็บเบอร์โทรหรือโดนสแปม ถ้าอยากลองส่งรายงาน ให้รัน `npm run dev` ในเครื่อง
+
+ผู้สอน deploy ด้วย
+
+```bash
+npx wrangler login
+npx wrangler deploy
+```
+
+demo นี้ไม่ส่งข้อมูลไปที่ระบบรายงานน้ำท่วมจริงใดๆ
