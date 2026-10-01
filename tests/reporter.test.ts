@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest"
-import { hashReporter, normalizeIp } from "../src/reporter.ts"
+import { clientIpOf, hashReporter, normalizeIp } from "../src/reporter.ts"
 
 const SECRET = "test-secret-one"
 
@@ -24,6 +24,31 @@ describe("hashReporter", () => {
 
   it("RPT-REQ-008 AC4 treats an IPv4-mapped address as IPv4", () => {
     expect(hashReporter(SECRET, "::ffff:203.0.113.10")).toBe(hashReporter(SECRET, "203.0.113.10"))
+  })
+})
+
+describe("clientIpOf", () => {
+  const SOCKET = "203.0.113.10"
+
+  it("RPT-REQ-008 AC7 ignores X-Forwarded-For when TRUST_PROXY is not set", () => {
+    expect(clientIpOf(SOCKET, "198.51.100.7", false)).toBe(SOCKET)
+    expect(clientIpOf(SOCKET, "198.51.100.7, 198.51.100.8", false)).toBe(SOCKET)
+  })
+
+  it("RPT-REQ-008 AC7 gives no address when there is no socket address, even with X-Forwarded-For", () => {
+    expect(clientIpOf(undefined, "198.51.100.7", false)).toBeUndefined()
+  })
+
+  it("RPT-REQ-008 AC7 uses the last X-Forwarded-For value when TRUST_PROXY is set", () => {
+    expect(clientIpOf(SOCKET, "198.51.100.7", true)).toBe("198.51.100.7")
+    expect(clientIpOf(SOCKET, "192.0.2.99, 198.51.100.7", true)).toBe("198.51.100.7")
+    expect(clientIpOf(SOCKET, "192.0.2.99 ,  198.51.100.7 ", true)).toBe("198.51.100.7")
+  })
+
+  it("RPT-REQ-008 AC7 falls back to the socket address when TRUST_PROXY is set but the header is missing or empty", () => {
+    expect(clientIpOf(SOCKET, undefined, true)).toBe(SOCKET)
+    expect(clientIpOf(SOCKET, "", true)).toBe(SOCKET)
+    expect(clientIpOf(SOCKET, " , ", true)).toBe(SOCKET)
   })
 })
 

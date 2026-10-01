@@ -3,6 +3,7 @@ import { createServer } from "node:http"
 import { ADMIN_TOKEN_MIN_LENGTH, isAdminEnabled } from "./admin.ts"
 import { createApp } from "./app.ts"
 import { createFileReportStore } from "./report-store.ts"
+import { clientIpOf } from "./reporter.ts"
 
 const port = Number(process.env.PORT ?? 3000)
 
@@ -10,6 +11,9 @@ const ipHashSecret = process.env.IP_HASH_SECRET ?? randomBytes(32).toString("hex
 if (!process.env.IP_HASH_SECRET) {
   console.warn("IP_HASH_SECRET is not set: using a random secret, so report quotas reset on every restart")
 }
+
+// Only behind exactly one reverse proxy: otherwise a sender can forge X-Forwarded-For and dodge the quota.
+const trustProxy = process.env.TRUST_PROXY === "1"
 
 const adminToken = process.env.ADMIN_TOKEN
 if (adminToken !== undefined && !isAdminEnabled(adminToken)) {
@@ -51,7 +55,8 @@ createServer((req, res) => {
       }
     }
     const path = new URL(req.url ?? "/", "http://x").pathname
-    const ctx = { now: new Date(), clientIp: req.socket.remoteAddress, authorization: req.headers.authorization }
+    const clientIp = clientIpOf(req.socket.remoteAddress, req.headers["x-forwarded-for"] as string | undefined, trustProxy)
+    const ctx = { now: new Date(), clientIp, authorization: req.headers.authorization }
     const { status, body: out, headers } = app(req.method ?? "GET", path, body, ctx)
     res.writeHead(status, { "content-type": "application/json; charset=utf-8", ...headers }).end(JSON.stringify(out))
   })

@@ -17,6 +17,23 @@ export function normalizeIp(ip: string): string {
   return `${network.map((group) => parseInt(group, 16).toString(16)).join(":")}::/64`
 }
 
+/**
+ * The address a request counts under (RPT-REQ-008 AC7). The socket address, unless the server sits behind one
+ * trusted proxy: then the last X-Forwarded-For value, which is the one that proxy appended itself.
+ */
+export function clientIpOf(
+  socketAddress: string | undefined,
+  forwardedFor: string | undefined,
+  trustProxy: boolean
+): string | undefined {
+  if (!trustProxy || socketAddress === undefined) return socketAddress
+  const forwarded = (forwardedFor ?? "")
+    .split(",")
+    .map((value) => value.trim())
+    .filter((value) => value !== "")
+  return forwarded.at(-1) ?? socketAddress
+}
+
 /** The only form of a reporter's identity that is ever stored (RPT-REQ-008). */
 export function hashReporter(secret: string, ip: string): string {
   return createHmac("sha256", secret).update(normalizeIp(ip)).digest("hex")

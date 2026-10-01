@@ -119,7 +119,7 @@ Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แ
 
 ## Later
 
-- ล้างแฮชหลัง 24 ชั่วโมง: RPT-REQ-008 AC5 (`purgeReporterHashes` และตัวตั้งเวลาใน `server.ts`), AC7 (`TRUST_PROXY`)
+- ล้างแฮชหลัง 24 ชั่วโมง: [x] RPT-REQ-008 AC5 (`purgeReporterHashes` และตัวตั้งเวลาใน `server.ts`), [x] AC7 (`TRUST_PROXY`: `clientIpOf` ใน `src/reporter.ts` แล้วให้ `server.ts` เรียกใช้)
 - ความทนทานของ file store: RPT-REQ-015 AC4 (ไฟล์เสีย), AC5 (เขียนไม่ได้ ย้อนสำเนาในหน่วยความจำ ตอบ 500)
 - หน้าเว็บ: RPT-REQ-016 (`public/report.html`, `public/report.js`, CSP), RPT-REQ-012 AC5
 - ขอบระบบ HTTP: RPT-REQ-019 (จำกัด body 10 KB, 413, method อื่นของ `/reports` ตอบ 404)
