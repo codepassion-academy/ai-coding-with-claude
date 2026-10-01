@@ -43,7 +43,9 @@
 - AC2: `body.notice === NOTICE`, `body.merged === false`
 - AC3: รายงานที่ส่งแล้วปรากฏใน `GET /districts/:id` → `userReports` (REQ-011)
 
-### RPT-REQ-002 เขตมาจาก path และต้องอยู่ใน 12 slug
+### RPT-REQ-002 เขตมาจาก path และต้องอยู่ใน 12 เขตที่ระบบรู้จัก
+
+> north-water 01 (academy#60): `:id` เป็น P-code ของ COD-AB เช่น `TH1038` slug เดิม 12 ตัว (`lat-phrao` …) ยังใช้ได้เป็น alias หนึ่งรุ่น response และที่เก็บรายงานใช้ P-code เสมอ regex ของ route เป็น `[A-Za-z0-9-]+` แล้วตรวจกับรายการ (`resolveDistrictId`)
 
 - AC1: `POST /districts/atlantis/reports` ได้ `404` `{ notice, error: "unknown district" }` และไม่มีอะไรถูกเก็บ
 - AC2: ทุก slug ใน `districts` ส่งได้ (รวม `sai-mai` ที่ไม่มีสถานีวัด)
@@ -232,7 +234,7 @@ export const DEPTH_CM: Record<DepthLevel, number> = { ankle: 10, knee: 50, waist
 /** ที่เก็บใน memory ไม่มี IP, UA, ชื่อ, เบอร์, พิกัด */
 export type Report = {
   id: string            // crypto.randomUUID()
-  districtId: string    // slug ใน districts
+  districtId: string    // P-code ใน districts เช่น TH1038 (north-water 01)
   landmark: string      // ผ่าน normalize + mask แล้ว ใช้แสดงผล
   landmarkKey: string   // landmark.toLowerCase() ใช้ dedupe
   depthLevel: DepthLevel

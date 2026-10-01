@@ -24,7 +24,12 @@ const publicFile = (path: string) => readFileSync(new URL(`../public/${path}`, i
 const NOT_LOADED = new Set([
   "http://www.w3.org/2000/svg", // SVG namespace
   "https://openstreetmap.org/copyright", // attribution link the ODbL requires
-  "https://protomaps.com" // attribution link
+  "https://protomaps.com", // attribution link
+  "https://data.humdata.org/dataset/cod-ab-tha", // COD-AB attribution link (CC BY-IGO)
+  // Official water information, always linked from the north tab (north-water safety rule 5)
+  "https://www.rid.go.th/",
+  "https://www.onwr.go.th/",
+  "https://www.disaster.go.th/"
 ])
 
 /** `public/vendor/SHA256SUMS` as [path, hash] pairs. */

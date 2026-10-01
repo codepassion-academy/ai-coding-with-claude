@@ -20,3 +20,9 @@ status: accepted
 - **ต้องแสดง attribution:** "© OpenStreetMap contributors" บนแผนที่ตามสัญญาอนุญาต ODbL
 - **ไม่ต้องมี API key และไม่มีบิลที่พุ่งตามคนใช้:** แลกกับการที่ต้องดูแลไฟล์แผนที่เอง
 - **ตัวเลขราคาเป็นของเดือนกันยายน 2026:** ก่อนตัดสินใจจริงควรตรวจอีกครั้งที่ [Google Maps Platform pricing](https://developers.google.com/maps/billing-and-pricing/pricing) และ [Mapbox pricing](https://www.mapbox.com/pricing)
+
+## Amendment 2026-10-01: Thailand overview (north-water, academy#60)
+
+แท็บ น้ำเหนืออยู่ไหน ต้องเห็นทั้งประเทศ จึงเพิ่มไฟล์ PMTiles ที่สอง `public/tiles/thailand.pmtiles` ตัดทั้งประเทศไทยที่ maxzoom 10 (ดูคำสั่งใน README) ใช้คู่กับไฟล์กรุงเทพฯ เดิม หลักการเดิมทุกข้อยังใช้: host เอง ไม่อยู่ใน git ไม่โหลดจากโดเมนอื่น และแสดง attribution ของ OpenStreetMap
+
+basemap ของ Protomaps ไม่มีเส้นแบ่งเขตระดับอำเภอ เส้นแบ่งจังหวัดและอำเภอของลุ่มน้ำเจ้าพระยาจึงมาจาก HDX COD-AB Thailand (กรมแผนที่ทหาร / OCHA, CC BY-IGO) ผ่าน `scripts/build-districts.mjs` ซึ่งลดรายละเอียดเส้นเหลือราว 270 KB และเสิร์ฟจาก server นี้เช่นกัน ต้องแสดง attribution ของ COD-AB บนแผนที่และในแท็บ

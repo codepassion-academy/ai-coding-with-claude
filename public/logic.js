@@ -71,5 +71,8 @@
   const positionOf = (item, centres) =>
     item.lngLat ?? (item.kind === "station" ? centres[item.districtId] ?? FALLBACK_CENTRE : place(centres, item.districtId, item.landmark.toLowerCase()))
 
-  window.NAMTUAM_LOGIC = { errorMessage, ageLabel, bangkokIso, mergeReports, inFilter, countByDepth, countByDistrict, place, positionOf }
+  /** Which tab the URL asks for: น้ำเหนืออยู่ไหน at exactly `#/north`, น้ำท่วมไหม otherwise. */
+  const tabFromHash = (hash) => (hash === "#/north" ? "north" : "flood")
+
+  window.NAMTUAM_LOGIC = { errorMessage, ageLabel, bangkokIso, mergeReports, inFilter, countByDepth, countByDistrict, place, positionOf, tabFromHash }
 })()

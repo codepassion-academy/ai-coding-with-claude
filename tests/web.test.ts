@@ -94,6 +94,16 @@ describe("web page (GET /)", () => {
     expect(res.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
   })
 
+  it("serves the basin จังหวัด and อำเภอ outlines for the north tab", async () => {
+    const base = await start()
+    for (const name of ["basin-provinces", "basin-districts"]) {
+      const res = await fetch(`${base}/data/${name}.geojson`)
+      expect(res.status, name).toBe(200)
+      expect(res.headers.get("content-type"), name).toBe("application/geo+json")
+      expect(((await res.json()) as { type: string }).type).toBe("FeatureCollection")
+    }
+  })
+
   it("serves the page logic script", async () => {
     const res = await fetch(`${await start()}/logic.js`)
     expect(res.status).toBe(200)

@@ -23,6 +23,7 @@ type Logic = {
   positionOf(item: Item, centres: Record<string, [number, number]>): [number, number]
   errorMessage(code: string, retryAfterSec?: number): string
   ageLabel(minutes: number): string
+  tabFromHash(hash: string): "flood" | "north"
 }
 
 /** The page logic module, loaded the way the browser loads it: a plain script that sets one global. */
@@ -159,5 +160,15 @@ describe("error messages", () => {
 describe("ageLabel", () => {
   it("words the age the same way the API does (RPT-REQ-011)", () => {
     for (const minutes of [0, 1, 5, 59, 60, 125, 359]) expect(logic.ageLabel(minutes), String(minutes)).toBe(ageLabelTh(minutes))
+  })
+})
+
+describe("tabFromHash (north-water 01)", () => {
+  it("opens น้ำเหนืออยู่ไหน only for #/north", () => {
+    expect(logic.tabFromHash("#/north")).toBe("north")
+  })
+
+  it("falls back to น้ำท่วมไหม for anything else", () => {
+    for (const hash of ["", "#", "#/", "#/North", "#north", "#/north/x", "#/flood"]) expect(logic.tabFromHash(hash), hash).toBe("flood")
   })
 })

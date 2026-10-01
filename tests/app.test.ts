@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 import { handle, NOTICE } from "../src/app.ts"
+import { createReportStore } from "../src/reports.ts"
 
 const now = new Date("2026-09-30T12:30:00Z")
 
@@ -17,7 +18,7 @@ describe("GET /districts/:id", () => {
     const res = handle("GET", "/districts/lat-phrao", undefined, { now })
     expect(res.status).toBe(200)
     expect(res.body).toMatchObject({
-      district: { id: "lat-phrao", nameTh: "ลาดพร้าว" },
+      district: { id: "TH1038", nameTh: "ลาดพร้าว" },
       stations: [{ id: "st-ladprao-01", latest: { at: "2026-09-30T19:00:00+07:00", levelCm: 104 } }]
     })
   })
@@ -50,8 +51,35 @@ describe("กึ่งกลางเขต (district centre)", () => {
   })
 
   it("includes the centre on GET /districts/:id", () => {
-    const res = handle("GET", "/districts/chatuchak", undefined, { now })
-    expect(res.body).toMatchObject({ district: { id: "chatuchak", centre: [100.56, 13.83] } })
+    const res = handle("GET", "/districts/TH1030", undefined, { now })
+    expect(res.body).toMatchObject({ district: { id: "TH1030", centre: [100.564, 13.8267] } })
+  })
+})
+
+describe("district IDs are COD-AB P-codes (north-water 01)", () => {
+  it("GET /districts lists the 12 Bangkok เขต by P-code", () => {
+    const { districts } = handle("GET", "/districts", undefined, { now }).body as { districts: { id: string; nameTh: string }[] }
+    expect(districts.every((d) => /^TH10\d{2}$/.test(d.id))).toBe(true)
+    expect(districts).toContainEqual(expect.objectContaining({ id: "TH1038", nameTh: "ลาดพร้าว" }))
+  })
+
+  it("still accepts the old Bangkok slug and answers with the P-code", () => {
+    const bySlug = handle("GET", "/districts/lat-phrao", undefined, { now })
+    const byPcode = handle("GET", "/districts/TH1038", undefined, { now })
+    expect(bySlug.status).toBe(200)
+    expect(bySlug.body).toEqual(byPcode.body)
+  })
+
+  it("files a report sent to an old slug under the P-code", () => {
+    const reports = createReportStore()
+    const body = { landmark: "ปากซอยลาดพร้าว 71", depth: "knee", seenAt: "2026-09-30T19:00:00+07:00" }
+    expect(handle("POST", "/districts/lat-phrao/reports", body, { now, reports, clientKey: "t" }).status).toBe(201)
+    const res = handle("GET", "/districts/TH1038", undefined, { now, reports })
+    expect(res.body).toMatchObject({ userReports: [{ landmark: "ปากซอยลาดพร้าว 71" }] })
+  })
+
+  it("does not serve basin districts outside the 12 the app knows yet", () => {
+    expect(handle("GET", "/districts/TH6001", undefined, { now }).status).toBe(404)
   })
 })
 

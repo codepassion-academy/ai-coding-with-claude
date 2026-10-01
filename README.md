@@ -57,6 +57,19 @@ pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/bangko
   --bbox=100.30,13.50,100.95,14.05 --maxzoom=15
 ```
 
+แท็บ **น้ำเหนืออยู่ไหน** (`/#/north`) ใช้ไฟล์ทั้งประเทศอีกไฟล์ ตัดที่ maxzoom 10 จึงเล็ก ถ้าไม่มีไฟล์นี้ แท็บยังแสดงเส้นแบ่งจังหวัดและอำเภอบนพื้นเรียบได้
+
+```bash
+pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/thailand.pmtiles \
+  --bbox=97.30,5.60,105.70,20.50 --maxzoom=10
+```
+
+เส้นแบ่งจังหวัดและอำเภอของลุ่มน้ำเจ้าพระยา (`public/data/basin-*.geojson`) และรายชื่ออำเภอ (`data/districts-th.json`) สร้างจาก [HDX COD-AB Thailand](https://data.humdata.org/dataset/cod-ab-tha) (กรมแผนที่ทหาร / OCHA, CC BY-IGO) ไฟล์ต้นทางใหญ่ราว 440 MB จึงไม่อยู่ใน git ถ้าจะสร้างใหม่ ให้ดาวน์โหลด `tha_admin_boundaries.geojson.zip` แตกไฟล์ แล้วรัน
+
+```bash
+node scripts/build-districts.mjs <โฟลเดอร์ที่มี tha_admin1.geojson และ tha_admin2.geojson>
+```
+
 คำสั่งนี้ดึงเฉพาะส่วนกรุงเทพฯ ผ่าน range request ไม่ได้โหลดทั้งโลก ข้อมูลแผนที่ © OpenStreetMap contributors
 
 ไฟล์ใน `public/vendor/` ปักเวอร์ชันไว้ใน `scripts/vendor-map.sh` และตรวจกับ `public/vendor/SHA256SUMS` ทุกครั้ง (test ก็ตรวจไฟล์บนดิสก์กับ SHA256SUMS โดยไม่ต่อเน็ต)
@@ -81,6 +94,8 @@ glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติ�
 | `src/rate-limit.ts` | จำกัด 5 รายงานต่อชั่วโมงต่อ client |
 | `src/read-body.ts` | อ่าน body ไม่เกิน 2048 byte |
 | `src/static.ts` | เสิร์ฟหน้าเว็บแผนที่ ไฟล์ tiles และไฟล์แผนที่ใน `public/vendor/` (รายการตายตัว) |
+| `scripts/build-districts.mjs` | สร้างรายชื่อและเส้นแบ่งจังหวัด/อำเภอในลุ่มน้ำเจ้าพระยาจาก HDX COD-AB |
+| `data/districts-th.json` | จังหวัดและอำเภอในลุ่มน้ำ พร้อม P-code ชื่อไทย และกึ่งกลาง |
 | `scripts/vendor-map.sh` | ดึงไฟล์แผนที่ที่ปักเวอร์ชันไว้ ตรวจกับ `public/vendor/SHA256SUMS` |
 | `src/server.ts` | HTTP server |
 | `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`), ข้อมูลจำลอง `demo.js` (เปิดด้วย `/?demo`) |

@@ -1,6 +1,6 @@
 # 01 · Tabs, Thailand map, จังหวัด/อำเภอ, P-code district IDs
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Map; Districts and IDs; Glossary)
 Blocked by: flood-map 01, flood-map 02, flood-map 03
 
