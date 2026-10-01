@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark light">
+  <title>น้ำท่วมไหม</title>
+  <link rel="preload" href="/fonts/noto-sans-thai-thai.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/vendor/maplibre-gl.css">
+  <link rel="stylesheet" href="/app.css">
+  <script src="/vendor/maplibre-gl.js" defer></script>
+  <script src="/vendor/pmtiles.js" defer></script>
+  <script src="/vendor/basemaps.js" defer></script>
+  <script src="/demo.js" defer></script>
+  <script src="/logic.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <div class="map" id="map" role="region" aria-label="แผนที่จุดน้ำท่วม"></div>
+
+  <aside class="panel" aria-labelledby="brand-name">
+    <span class="handle" aria-hidden="true"></span>
+
+    <header class="brand">
+      <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+        <path d="M16 3c5.5 7 9 11.8 9 16a9 9 0 0 1-18 0c0-4.2 3.5-9 9-16Z" fill="currentColor" opacity="0.18"/>
+        <path d="M16 3c5.5 7 9 11.8 9 16a9 9 0 0 1-18 0c0-4.2 3.5-9 9-16Z" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M8.2 20.5c2.6 1.6 5.2-1.6 7.8 0s5.2 1.6 7.8 0" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      <div class="brand-text">
+        <h1 id="brand-name">น้ำท่วมไหม</h1>
+        <p>แผนที่จุดน้ำท่วมจากคนในพื้นที่ · กรุงเทพฯ</p>
+      </div>
+      <button class="cta" id="report-open" type="button" data-tab="flood">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span>แจ้งจุดน้ำท่วม</span>
+      </button>
+    </header>
+
+    <nav class="tabs" aria-label="มุมมองแผนที่">
+      <a id="tab-flood" href="#/" aria-current="page">น้ำท่วมไหม</a>
+      <a id="tab-north" href="#/north">น้ำเหนืออยู่ไหน</a>
+    </nav>
+
+    <p class="notice" id="notice">ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ</p>
+
+    <section class="overview" aria-labelledby="overview-h" data-tab="flood">
+      <div class="section-head">
+        <h2 id="overview-h">สถานการณ์ตอนนี้</h2>
+        <span class="updated" id="updated">กำลังโหลด…</span>
+      </div>
+      <dl class="summary" id="summary">
+        <div class="tile ankle"><dt>ระดับข้อเท้า</dt><dd><b>0</b><span>จุด</span></dd></div>
+        <div class="tile knee"><dt>ระดับเข่า</dt><dd><b>0</b><span>จุด</span></dd></div>
+        <div class="tile waist"><dt>ระดับเอว</dt><dd><b>0</b><span>จุด</span></dd></div>
+      </dl>
+    </section>
+
+    <section class="reports" aria-labelledby="list-h" data-tab="flood">
+      <div class="section-head">
+        <h2 id="list-h">จุดที่มีคนรายงาน <span class="count" id="count"></span></h2>
+        <button class="toggle" id="demo-toggle" type="button" aria-pressed="false">
+          <span class="switch" aria-hidden="true"></span>ข้อมูลจำลอง
+        </button>
+      </div>
+      <div class="filters" id="filters" role="group" aria-label="กรองตามเขต"></div>
+      <ol class="incidents" id="incidents" aria-live="polite"></ol>
+    </section>
+
+    <section class="north" aria-labelledby="north-h" data-tab="north" hidden>
+      <div class="section-head"><h2 id="north-h">ลุ่มน้ำเจ้าพระยา</h2></div>
+      <p class="lead">จังหวัดและอำเภอตั้งแต่นครสวรรค์ลงมาถึงกรุงเทพฯ ซูมเข้าเพื่อดูชื่ออำเภอ</p>
+      <button class="cta wide" id="arriving-open" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span>แจ้งน้ำกำลังมา</span>
+      </button>
+      <p class="hint arriving-count" id="arriving-count"></p>
+      <div class="section-head scenario-head">
+        <h3 id="scenario-h">สถานการณ์จำลอง</h3>
+        <button class="toggle" id="scenario-toggle" type="button" aria-pressed="false" aria-controls="scenario-panel">
+          <span class="switch" aria-hidden="true"></span>เปิดดู
+        </button>
+      </div>
+      <div class="scenario" id="scenario-panel" hidden>
+        <p class="scenario-label" id="scenario-label">ข้อมูลจำลอง · ไม่ใช่การพยากรณ์</p>
+        <label class="scenario-time" for="scenario-t">เวลาหลังเขื่อนปล่อยน้ำ <output id="scenario-t-out" for="scenario-t">T+0 ชม.</output></label>
+        <input id="scenario-t" type="range" min="0" max="108" step="6" value="0">
+        <ul class="releases" id="scenario-releases" aria-label="การระบายน้ำในสถานการณ์จำลอง"></ul>
+        <div class="eta">
+          <label for="eta-place">น้ำจะมาถึงเมื่อไร (ในสถานการณ์จำลอง)</label>
+          <select id="eta-place"><option value="">เลือกจุด หรือแตะบนแผนที่</option></select>
+          <p class="eta-result" id="eta-result" aria-live="polite"></p>
+          <p class="hint">คำนวณในเครื่องของคุณเท่านั้น ตำแหน่งที่เลือกไม่ถูกส่งไปไหน</p>
+        </div>
+        <p class="fineprint" id="scenario-note"></p>
+      </div>
+
+      <h3>ข้อมูลน้ำจากหน่วยงานทางการ</h3>
+      <ul class="official">
+        <li><a href="https://www.rid.go.th/" target="_blank" rel="noopener">กรมชลประทาน</a><span>น้ำในเขื่อนและการระบายน้ำ</span></li>
+        <li><a href="https://www.onwr.go.th/" target="_blank" rel="noopener">สำนักงานทรัพยากรน้ำแห่งชาติ (สทนช.)</a><span>ประกาศสถานการณ์น้ำ</span></li>
+        <li><a href="https://www.disaster.go.th/" target="_blank" rel="noopener">กรมป้องกันและบรรเทาสาธารณภัย (ปภ.)</a><span>ประกาศพื้นที่ภัยพิบัติ</span></li>
+      </ul>
+      <p class="fineprint">
+        ใช้ข้อมูลจากหน่วยงานข้างบนในการตัดสินใจ หน้านี้เป็นตัวอย่างเพื่อการเรียน
+        ขอบเขตการปกครองจาก <a href="https://data.humdata.org/dataset/cod-ab-tha" target="_blank" rel="noopener">COD-AB Thailand</a>
+        กรมแผนที่ทหาร / OCHA (CC BY-IGO)
+      </p>
+    </section>
+
+    <p class="fineprint" data-tab="flood">
+      รายงานจากคนในพื้นที่ยังไม่ได้ยืนยันเสมอ แสดงเฉพาะ 6 ชั่วโมงล่าสุด
+      ตำแหน่งหมุดเป็นค่าประมาณจากเขต ระบบไม่เก็บพิกัดของผู้รายงาน
+    </p>
+  </aside>
+
+  <div class="legend" id="legend" hidden>
+    <span class="legend-title">ความลึกของน้ำ <em>ข้อมูลจำลอง</em></span>
+    <ol class="legend-steps" aria-label="ระดับน้ำ 10 ถึง 100 เซนติเมตร">
+      <li class="s1"><span>10</span></li>
+      <li class="s2"><span>30</span></li>
+      <li class="s3"><span>50</span></li>
+      <li class="s4"><span>80</span></li>
+      <li class="s5"><span>100+ cm</span></li>
+    </ol>
+  </div>
+
+  <p class="map-status" id="map-status" hidden></p>
+
+  <dialog class="sheet" id="report-dialog" aria-labelledby="form-h">
+    <form id="report-form" novalidate>
+      <div class="sheet-head">
+        <div>
+          <h2 id="form-h">แจ้งจุดน้ำท่วม</h2>
+          <p class="hint">ข้อมูลของคุณช่วยให้คนในพื้นที่เลี่ยงเส้นทางได้</p>
+        </div>
+        <button class="icon-button" id="report-close" type="button" aria-label="ปิด">
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"/></svg>
+        </button>
+      </div>
+
+      <div class="field">
+        <label for="f-district" id="f-district-label">เขต</label>
+        <select id="f-district" name="district" required></select>
+      </div>
+
+      <div class="field">
+        <div class="row"><label for="f-landmark">จุดสังเกต</label><span class="counter" id="f-counter">0 / 80</span></div>
+        <input id="f-landmark" name="landmark" type="text" autocomplete="off" placeholder="เช่น ปากซอยลาดพร้าว 71" required>
+        <p class="warn">อย่าใส่เลขที่บ้านหรือเบอร์โทร ถ้าใส่มา ระบบจะปิดเป็น ***</p>
+      </div>
+
+      <fieldset class="field">
+        <legend>น้ำลึกประมาณ</legend>
+        <div class="depth-picker">
+          <input type="radio" name="depth" id="f-ankle" value="ankle">
+          <label for="f-ankle" class="ankle"><span class="staff" aria-hidden="true"><i></i></span>ข้อเท้า<small>~10 cm</small></label>
+          <input type="radio" name="depth" id="f-knee" value="knee" checked>
+          <label for="f-knee" class="knee"><span class="staff" aria-hidden="true"><i></i></span>เข่า<small>~50 cm</small></label>
+          <input type="radio" name="depth" id="f-waist" value="waist">
+          <label for="f-waist" class="waist"><span class="staff" aria-hidden="true"><i></i></span>เอว<small>~100 cm</small></label>
+        </div>
+      </fieldset>
+
+      <div class="field">
+        <label for="f-seen">เห็นเมื่อ</label>
+        <select id="f-seen" name="seen">
+          <option value="1">เมื่อสักครู่</option>
+          <option value="15">15 นาทีก่อน</option>
+          <option value="30">30 นาทีก่อน</option>
+          <option value="60">1 ชั่วโมงก่อน</option>
+          <option value="120">2 ชั่วโมงก่อน</option>
+          <option value="150">2 ชั่วโมงครึ่งก่อน</option>
+        </select>
+        <p class="hint">รับเฉพาะสิ่งที่เห็นภายใน 3 ชั่วโมง ส่งได้ 5 ครั้งต่อชั่วโมง</p>
+      </div>
+
+      <p class="form-error" id="f-error" role="alert" hidden></p>
+      <button class="cta wide" id="f-submit" type="submit">ส่งรายงาน</button>
+    </form>
+  </dialog>
+
+  <p class="toast" id="toast" role="status" hidden></p>
+</body>
+</html>

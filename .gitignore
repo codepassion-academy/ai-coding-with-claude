@@ -3,3 +3,9 @@ node_modules/
 .env.*
 CLAUDE.local.md
 .claude/settings.local.json
+.agents/
+.claude/
+.hermes/
+.kiro
+# Map tiles are downloaded per machine (README: หน้าเว็บแผนที่), not committed
+public/tiles/
