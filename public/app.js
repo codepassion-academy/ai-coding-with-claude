@@ -419,8 +419,9 @@
     })
     return {
       version: 8,
-      glyphs: "https://protomaps.github.io/basemaps-assets/fonts/{fontstack}/{range}.pbf",
-      sprite: `https://protomaps.github.io/basemaps-assets/sprites/v4/${flavor}`,
+      // Self-hosted (ADR 0001, scripts/vendor-map.sh). MapLibre wants absolute URLs here, like the tiles.
+      glyphs: `${location.origin}/vendor/glyphs/{fontstack}/{range}.pbf`,
+      sprite: `${location.origin}/vendor/sprites/${flavor}`,
       sources: {
         protomaps: {
           type: "vector",

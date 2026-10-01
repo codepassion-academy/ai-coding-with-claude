@@ -46,7 +46,7 @@ curl -X POST localhost:3000/districts/lat-phrao/reports \
 เปิด <http://localhost:3000> หลัง `npm run dev` จะเห็นแผนที่ หมุดจุดที่มีคนรายงาน สถานีวัด รายการจุด และปุ่ม **แจ้งจุดน้ำท่วม**
 
 - ตัวแผนที่ใช้ MapLibre GL JS กับไฟล์ PMTiles ที่ host เอง (ดู [ADR 0001](docs/adr/0001-maplibre-pmtiles-basemap.md))
-  โหลด MapLibre จาก unpkg แบบปักเวอร์ชันและมี `integrity` จึงไม่ต้อง `npm install` เพิ่ม
+  ไฟล์ทุกอย่างของแผนที่ (MapLibre, pmtiles, basemaps, glyphs, sprites) อยู่ใน `public/vendor/` และเสิร์ฟจาก server นี้ หน้าเว็บไม่ดึงอะไรจากเว็บอื่น
 - **ตำแหน่งหมุดเป็นค่าประมาณจากเขต** API ไม่เก็บพิกัดของผู้รายงาน (spec §5, RPT-REQ-013)
 - ไฟล์แผนที่พื้นหลังไม่อยู่ใน git ถ้ายังไม่มี หน้าเว็บยังแสดงหมุดบนพื้นเรียบได้ อยากได้ถนนและชื่อสถานที่ให้สร้างไฟล์เอง:
 
@@ -58,6 +58,15 @@ pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/bangko
 ```
 
 คำสั่งนี้ดึงเฉพาะส่วนกรุงเทพฯ ผ่าน range request ไม่ได้โหลดทั้งโลก ข้อมูลแผนที่ © OpenStreetMap contributors
+
+ไฟล์ใน `public/vendor/` ปักเวอร์ชันไว้ใน `scripts/vendor-map.sh` และตรวจกับ `public/vendor/SHA256SUMS` ทุกครั้ง (test ก็ตรวจไฟล์บนดิสก์กับ SHA256SUMS โดยไม่ต่อเน็ต)
+
+```bash
+scripts/vendor-map.sh            # ดึงใหม่ ตรวจกับ SHA256SUMS ถ้าไม่ตรงจะไม่ติดตั้งอะไรเลย
+UPDATE=1 scripts/vendor-map.sh   # ใช้เฉพาะตอนเปลี่ยนเวอร์ชันที่ปักไว้ จะเขียน SHA256SUMS ใหม่ ตรวจ diff ก่อน commit
+```
+
+glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติน ไทย และเครื่องหมายวรรคตอน ชื่อสถานที่ภาษาอื่นจึงไม่แสดง (ยอมรับแล้วใน spec)
 
 ## มีอะไรใน repo
 
@@ -71,7 +80,8 @@ pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/bangko
 | `src/reports.ts` | รายงานจากคนในพื้นที่: ตรวจข้อมูล ปิดเบอร์โทร รวมรายงานซ้ำ หมดอายุ |
 | `src/rate-limit.ts` | จำกัด 5 รายงานต่อชั่วโมงต่อ client |
 | `src/read-body.ts` | อ่าน body ไม่เกิน 2048 byte |
-| `src/static.ts` | เสิร์ฟหน้าเว็บแผนที่และไฟล์ tiles |
+| `src/static.ts` | เสิร์ฟหน้าเว็บแผนที่ ไฟล์ tiles และไฟล์แผนที่ใน `public/vendor/` (รายการตายตัว) |
+| `scripts/vendor-map.sh` | ดึงไฟล์แผนที่ที่ปักเวอร์ชันไว้ ตรวจกับ `public/vendor/SHA256SUMS` |
 | `src/server.ts` | HTTP server |
 | `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`), ข้อมูลจำลอง `demo.js` (เปิดด้วย `/?demo`) |
 | `public/fonts/` | Noto Sans Thai แบบ variable (SIL OFL 1.1, ดู `OFL.txt`) host เองไม่ดึงจาก Google Fonts |

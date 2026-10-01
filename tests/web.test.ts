@@ -30,26 +30,22 @@ describe("web page (GET /)", () => {
     expect(await res.text()).toContain(NOTICE)
   })
 
-  it("sends a CSP that allows only this site and the pinned CDN, with no inline script", async () => {
+  it("sends a CSP that allows only this site, with no inline script", async () => {
     const res = await fetch(`${await start()}/`)
     const csp = res.headers.get("content-security-policy") ?? ""
     expect(csp).toContain("default-src 'self'")
-    expect(csp).toContain("script-src 'self' https://unpkg.com")
+    expect(csp).toContain("script-src 'self';")
     expect(csp).toContain("frame-ancestors 'none'")
     expect(csp).not.toContain("unsafe-inline")
     expect(csp).not.toContain("unsafe-eval")
     expect(res.headers.get("x-content-type-options")).toBe("nosniff")
   })
 
-  it("pins every CDN script and stylesheet to an exact version with an integrity hash", async () => {
+  it("loads every script and stylesheet from this site (pinned in public/vendor/SHA256SUMS)", async () => {
     const html = await (await fetch(`${await start()}/`)).text()
-    const external = [...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="(https:[^"]+)"[^>]*>/g)]
-    expect(external.length).toBeGreaterThan(0)
-    for (const [tag, url] of external) {
-      expect(url, url).toMatch(/@\d+\.\d+\.\d+\//)
-      expect(tag, url).toMatch(/integrity="sha384-[A-Za-z0-9+/=]+"/)
-      expect(tag, url).toContain("crossorigin=\"anonymous\"")
-    }
+    const assets = [...html.matchAll(/<(?:script|link)\b[^>]*(?:src|href)="([^"]+)"[^>]*>/g)].map((m) => m[1] ?? "")
+    expect(assets).toContain("/vendor/maplibre-gl.js")
+    for (const url of assets) expect(url, url).toMatch(/^\/(?!\/)/)
   })
 
   it("has no inline script or inline style, so the CSP can stay strict", async () => {
