@@ -130,6 +130,7 @@ describe("error messages", () => {
     "seen_at_invalid",
     "seen_at_future",
     "seen_at_too_old",
+    "kind_invalid",
     "store_full",
     "payload_too_large",
     "unknown district",

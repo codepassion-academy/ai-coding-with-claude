@@ -70,6 +70,11 @@
     <section class="north" aria-labelledby="north-h" data-tab="north" hidden>
       <div class="section-head"><h2 id="north-h">ลุ่มน้ำเจ้าพระยา</h2></div>
       <p class="lead">จังหวัดและอำเภอตั้งแต่นครสวรรค์ลงมาถึงกรุงเทพฯ ซูมเข้าเพื่อดูชื่ออำเภอ</p>
+      <button class="cta wide" id="arriving-open" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+        <span>แจ้งน้ำกำลังมา</span>
+      </button>
+      <p class="hint arriving-count" id="arriving-count"></p>
       <div class="section-head scenario-head">
         <h3 id="scenario-h">สถานการณ์จำลอง</h3>
         <button class="toggle" id="scenario-toggle" type="button" aria-pressed="false" aria-controls="scenario-panel">
@@ -129,7 +134,7 @@
       </div>
 
       <div class="field">
-        <label for="f-district">เขต</label>
+        <label for="f-district" id="f-district-label">เขต</label>
         <select id="f-district" name="district" required></select>
       </div>
 
