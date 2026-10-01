@@ -41,7 +41,9 @@ Time is injected: `handle` takes `ctx.now` and passes it down (`latestReading(st
 
 ## Flood reports feature (in progress)
 
-The course adds citizen flood reporting in stages, each leaving a document: `docs/intent/flood-reports.md` (why, constraints, open questions) → `docs/specs/flood-reports.md` (requirements `RPT-REQ-001`…`020` with acceptance criteria, data model, API) → `docs/plans/flood-reports.md` (not written yet) → code. Read the spec before touching this feature and cite requirement ids in tests and commits. Both documents are written in Thai.
+The course adds citizen flood reporting in stages, each leaving a document: `docs/intent/flood-reports.md` (why, constraints, open questions) → `docs/specs/flood-reports.md` (requirements `RPT-REQ-001`…`020` with acceptance criteria, data model, API) → `docs/plans/flood-reports.md` → code. The plan is a checklist of steps, each a test-first commit; steps 1-10 are done (API, validation, quota, merging, admin hide/unhide, logging). The plan's "Later" section lists what remains (hash purge, file-store robustness, `/report` web page, body limit, README). Read the spec and the plan before touching this feature and cite requirement ids in tests and commits. All three documents are written in Thai. The spec's AC values are authoritative (severity cut-offs 15/30 cm, merge window 30 min, report TTL 6 h counted from `observedAt`); do not write tests with other numbers without the user changing the spec first.
+
+Code layout: `src/reports.ts` (pure functions and all tunable constants), `src/report-store.ts`, `src/reporter.ts` (IP hashing), `src/admin.ts` (bearer token), `src/report-log.ts` (log allowlist; never widen it to make a test pass). `createApp(deps)` in `src/app.ts` builds a router around an injected store; tests use it with a memory store, while the exported `handle` keeps the original context-only signature.
 
 Spec decisions that shape the code:
 
@@ -66,4 +68,4 @@ Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-
 
 ### Domain docs
 
-Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root. See `docs/agents/domain.md`.
+Single-context: one `GLOSSARY.md` + `docs/adr/` at the repo root (neither exists yet). See `docs/agents/domain.md`.
