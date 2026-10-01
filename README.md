@@ -5,13 +5,17 @@
 > ติดตามสถานการณ์น้ำจริงจากประกาศของกรุงเทพมหานครและหน่วยงานรัฐ
 
 แอปเล็กๆ ที่ใช้ในคอร์ส [AI Coding with Claude](https://academy.codepassion.co/courses/ai-coding-with-claude/) ของ CodePassion Academy
-แอปแสดงรายชื่อเขตและระดับน้ำล่าสุดของสถานีวัดในเขตนั้น (จากข้อมูลที่บันทึกไว้)
-ในคลาสเราเพิ่มฟีเจอร์**ให้คนในพื้นที่รายงานจุดน้ำท่วม** ตั้งแต่ขั้นวางแผนจนถึงตั้งด่านตรวจอัตโนมัติ
-และมีหน้าเว็บแผนที่ที่ `http://localhost:3000` สำหรับดูและแจ้งรายงาน (ดูหัวข้อ "หน้าเว็บแผนที่")
-ขั้นตอนทั้งหมดอยู่ใน [Workshop Guide](https://academy.codepassion.co/courses/ai-coding-with-claude/workshop-guide)
+
+- **API** แสดงรายชื่อเขตและระดับน้ำล่าสุดของสถานีวัดในเขตนั้น (จากข้อมูลที่บันทึกไว้)
+- **ฟีเจอร์ที่ทำในคลาส:** ให้คนในพื้นที่รายงานจุดน้ำท่วม ตั้งแต่ขั้นวางแผนจนถึงตั้งด่านตรวจอัตโนมัติ
+- **หน้าเว็บแผนที่** สำหรับดูและแจ้งรายงาน
+
+ขั้นตอนของคลาสทั้งหมดอยู่ใน [Workshop Guide](https://academy.codepassion.co/courses/ai-coding-with-claude/workshop-guide)
 
 > **ห้ามส่งรายงานทดสอบไปที่ระบบจริง** เช่นแผนที่ ROOP TAN JAI Flood Watch (`flood-api.rooptanjai.com`)
 > คนใช้แผนที่นั้นตัดสินใจจริงในช่วงน้ำท่วม อ่านข้อมูล (GET) ได้ แต่ห้ามส่งหรือลบรายงาน
+
+**ในหน้านี้:** [เริ่มใช้](#เริ่มใช้) · [หน้าเว็บแผนที่](#หน้าเว็บแผนที่) · [Deploy](#deploy-ขึ้น-cloudflare) · [มีอะไรใน repo](#มีอะไรใน-repo) · [Branch และ tag](#branch-และ-tag)
 
 ## เริ่มใช้
 
@@ -26,7 +30,7 @@ npm run lint    # เช็ก type ด้วย tsc
 npm run dev     # เปิด server ที่ http://localhost:3000
 ```
 
-ลองเรียก (ยิงเฉพาะ `localhost` เท่านั้น)
+ลองเรียก API (ยิงเฉพาะ `localhost` เท่านั้น)
 
 ```bash
 curl localhost:3000/districts
@@ -38,41 +42,48 @@ curl -X POST localhost:3000/districts/lat-phrao/reports \
   -d "{\"landmark\":\"ปากซอยลาดพร้าว 71\",\"depth\":\"knee\",\"seenAt\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}"
 ```
 
-ส่งข้อความเดิมซ้ำจะได้ `200` และ `merged: true`, ส่งเกิน 5 ครั้งใน 1 ชั่วโมงจะได้ `429` พร้อม `Retry-After`,
-ใส่เบอร์โทรในจุดสังเกตจะถูกเก็บเป็น `***`
+| ลองทำ | ผลที่ได้ |
+| ----- | ------- |
+| ส่งข้อความเดิมซ้ำ | `200` และ `merged: true` |
+| ส่งเกิน 5 ครั้งใน 1 ชั่วโมง | `429` พร้อม `Retry-After` |
+| ใส่เบอร์โทรในจุดสังเกต | ถูกเก็บเป็น `***` |
 
 ## หน้าเว็บแผนที่
 
 เปิด <http://localhost:3000> หลัง `npm run dev` จะเห็นแผนที่ หมุดจุดที่มีคนรายงาน สถานีวัด รายการจุด และปุ่ม **แจ้งจุดน้ำท่วม**
+แท็บ **น้ำเหนืออยู่ไหน** (`/#/north`) แสดงลุ่มน้ำเจ้าพระยาทั้งลุ่ม และ `/?demo` เปิดข้อมูลจำลอง
 
-- ตัวแผนที่ใช้ MapLibre GL JS กับไฟล์ PMTiles ที่ host เอง (ดู [ADR 0001](docs/adr/0001-maplibre-pmtiles-basemap.md))
-  ไฟล์ทุกอย่างของแผนที่ (MapLibre, pmtiles, basemaps, glyphs, sprites) อยู่ใน `public/vendor/` และเสิร์ฟจาก server นี้ หน้าเว็บไม่ดึงอะไรจากเว็บอื่น
 - **ตำแหน่งหมุดเป็นค่าประมาณจากเขต** API ไม่เก็บพิกัดของผู้รายงาน (spec §5, RPT-REQ-013)
-- ไฟล์แผนที่กรุงเทพฯ `public/tiles/bangkok.pmtiles` อยู่ใน git แล้ว (ADR 0001 amendment) ส่วนไฟล์ทั้งประเทศยังไม่อยู่ ถ้าไม่มีไฟล์ หน้าเว็บยังแสดงหมุดบนพื้นเรียบได้ อยากสร้างใหม่ให้ใช้:
+- **ไม่ดึงอะไรจากเว็บอื่น** ตัวแผนที่ใช้ MapLibre GL JS กับไฟล์ PMTiles ที่ host เอง (ดู [ADR 0001](docs/adr/0001-maplibre-pmtiles-basemap.md)) ไฟล์ทุกอย่างของแผนที่อยู่ใน `public/vendor/` และเสิร์ฟจาก server นี้
+- **ไฟล์แผนที่กรุงเทพฯ** `public/tiles/bangkok.pmtiles` อยู่ใน git แล้ว ไฟล์ทั้งประเทศ (`thailand.pmtiles`) ยังไม่อยู่ ถ้าไม่มีไฟล์ หน้าเว็บยังแสดงหมุดและเส้นแบ่งบนพื้นเรียบได้
+- ข้อมูลแผนที่ © OpenStreetMap contributors เส้นแบ่งจังหวัดและอำเภอจาก [HDX COD-AB Thailand](https://data.humdata.org/dataset/cod-ab-tha) (กรมแผนที่ทหาร / OCHA, CC BY-IGO)
+
+<details>
+<summary><b>สร้างหรืออัปเดตไฟล์แผนที่เอง</b> (tiles, เส้นแบ่งจังหวัด/อำเภอ, ไฟล์ใน <code>public/vendor/</code>)</summary>
+
+**ไฟล์ tiles** ติดตั้ง [pmtiles CLI](https://docs.protomaps.com/pmtiles/cli) ดูชื่อไฟล์ build ล่าสุดที่ <https://maps.protomaps.com/builds/> แล้วแทน `YYYYMMDD`
+คำสั่งดึงเฉพาะพื้นที่ที่ต้องการผ่าน range request ไม่ได้โหลดทั้งโลก
 
 ```bash
-# ติดตั้ง pmtiles CLI: https://docs.protomaps.com/pmtiles/cli
-# ดูชื่อไฟล์ build ล่าสุดที่ https://maps.protomaps.com/builds/ แล้วแทน YYYYMMDD
+# กรุงเทพฯ ละเอียดถึง zoom 15
 pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/bangkok.pmtiles \
   --bbox=100.30,13.50,100.95,14.05 --maxzoom=15
-```
 
-แท็บ **น้ำเหนืออยู่ไหน** (`/#/north`) ใช้ไฟล์ทั้งประเทศอีกไฟล์ ตัดที่ maxzoom 10 จึงเล็ก ถ้าไม่มีไฟล์นี้ แท็บยังแสดงเส้นแบ่งจังหวัดและอำเภอบนพื้นเรียบได้
-
-```bash
+# ทั้งประเทศ สำหรับแท็บน้ำเหนือ ตัดที่ zoom 10 จึงเล็ก
 pmtiles extract https://build.protomaps.com/YYYYMMDD.pmtiles public/tiles/thailand.pmtiles \
   --bbox=97.30,5.60,105.70,20.50 --maxzoom=10
 ```
 
-เส้นแบ่งจังหวัดและอำเภอของลุ่มน้ำเจ้าพระยา (`public/data/basin-*.geojson`) และรายชื่ออำเภอ (`data/districts-th.json`) สร้างจาก [HDX COD-AB Thailand](https://data.humdata.org/dataset/cod-ab-tha) (กรมแผนที่ทหาร / OCHA, CC BY-IGO) ไฟล์ต้นทางใหญ่ราว 440 MB จึงไม่อยู่ใน git ถ้าจะสร้างใหม่ ให้ดาวน์โหลด `tha_admin_boundaries.geojson.zip` แตกไฟล์ แล้วรัน
+ถ้าเปลี่ยน `bangkok.pmtiles` ต้องอัปโหลดใหม่ที่ R2 ด้วย (ดู [คู่มือ deploy](docs/deploy-cloudflare.md) ขั้น 3)
+
+**เส้นแบ่งจังหวัดและอำเภอ** (`public/data/basin-*.geojson`) และรายชื่ออำเภอ (`data/districts-th.json`) ไฟล์ต้นทางใหญ่ราว 440 MB จึงไม่อยู่ใน git
+ดาวน์โหลด `tha_admin_boundaries.geojson.zip` จาก HDX แตกไฟล์ แล้วรัน
 
 ```bash
 node scripts/build-districts.mjs <โฟลเดอร์ที่มี tha_admin1.geojson และ tha_admin2.geojson>
 ```
 
-คำสั่งนี้ดึงเฉพาะส่วนกรุงเทพฯ ผ่าน range request ไม่ได้โหลดทั้งโลก ข้อมูลแผนที่ © OpenStreetMap contributors
-
-ไฟล์ใน `public/vendor/` ปักเวอร์ชันไว้ใน `scripts/vendor-map.sh` และตรวจกับ `public/vendor/SHA256SUMS` ทุกครั้ง (test ก็ตรวจไฟล์บนดิสก์กับ SHA256SUMS โดยไม่ต่อเน็ต)
+**ไฟล์ใน `public/vendor/`** ปักเวอร์ชันไว้ใน `scripts/vendor-map.sh` และตรวจกับ `public/vendor/SHA256SUMS` ทุกครั้ง (test ก็ตรวจไฟล์บนดิสก์กับ SHA256SUMS โดยไม่ต่อเน็ต)
 
 ```bash
 scripts/vendor-map.sh            # ดึงใหม่ ตรวจกับ SHA256SUMS ถ้าไม่ตรงจะไม่ติดตั้งอะไรเลย
@@ -81,56 +92,68 @@ UPDATE=1 scripts/vendor-map.sh   # ใช้เฉพาะตอนเปลี
 
 glyphs มีเฉพาะ Noto Sans Regular/Medium ช่วงละติน ไทย และเครื่องหมายวรรคตอน ชื่อสถานที่ภาษาอื่นจึงไม่แสดง (ยอมรับแล้วใน spec)
 
-## Deploy ขึ้น Cloudflare (demo)
+</details>
 
-URL บน `*.workers.dev` เป็น **demo สำหรับสอน** ไม่ประชาสัมพันธ์ให้ประชาชน ข้อมูลยังเป็นข้อมูลสมมติ (ดู [ADR 0003](docs/adr/0003-cloudflare-hosting.md))
+## Deploy ขึ้น Cloudflare
 
-- push เข้า `main` → Workers Builds ของ Cloudflare รัน `npm run lint` และ `npm test` แล้วจึง `wrangler deploy` (ตั้งใน dashboard ไม่มีไฟล์ CI ใน repo)
-- ไฟล์ tiles ใหญ่เกิน 25 MiB ของ Static Assets จึงอยู่ใน R2 bucket `namthuam-tiles` อัปโหลดด้วยมือเมื่อไฟล์เปลี่ยน
-- รายงานและ rate limit อยู่ใน Durable Object เดียว (SQLite) client key มาจาก `CF-Connecting-IP` แล้ว HMAC ไม่เก็บ IP
+แอปนี้ deploy เป็น **demo สำหรับสอน** บน Cloudflare Workers (Free plan) ได้ URL แบบ `https://namthuam.<subdomain>.workers.dev`
+ไม่ประชาสัมพันธ์ให้ประชาชน ข้อมูลยังเป็นข้อมูลสมมติ
 
-ตั้งค่าครั้งแรก ทำใน [dashboard](https://dash.cloudflare.com) ทั้งหมด ไม่ต้องใช้ CLI หรือ API token
+**👉 ทำตาม [คู่มือ deploy ทีละขั้น](docs/deploy-cloudflare.md)** ตั้งแต่สมัครบัญชีจนได้ URL ทำใน dashboard ทั้งหมด ไม่ต้องใช้ CLI หรือ API token ใช้เวลาราว 20–30 นาที
 
-1. **R2** → Create bucket ชื่อ `namthuam-tiles` → เปิด bucket → Upload `public/tiles/bangkok.pmtiles` (ต้องมี bucket ก่อน deploy ครั้งแรก)
-2. **Workers & Pages** → Create → Import a repository → เลือก `codepassion-academy/ai-coding-with-claude`
-   - Project name: `namthuam` (ต้องตรงกับ `name` ใน `wrangler.jsonc`)
-   - Build command: `npm ci && npm run lint && npm test`
-   - Deploy command: `npx wrangler@4.145.0 deploy`
-   - Production branch: `main` ปิด builds for non-production branches
-3. Worker `namthuam` → **Settings → Variables and Secrets** → Add → Type *Secret* ชื่อ `CLIENT_KEY_SECRET` ค่าสุ่มยาว (เช่นจาก `openssl rand -hex 32`) ก่อนตั้งค่านี้ GET ใช้ได้ แต่ POST รายงานจะได้ 500
+สรุปสั้นๆ ว่าทำงานอย่างไร
 
-ลองบนเครื่องด้วย workerd จริง (ไม่ต้องลง package)
-
-```bash
-npx wrangler@4.145.0 r2 object put namthuam-tiles/bangkok.pmtiles --file public/tiles/bangkok.pmtiles --local
-npx wrangler@4.145.0 dev --var CLIENT_KEY_SECRET:dev-only
+```
+push main → Workers Builds: lint → test → deploy → URL เดิมอัปเดต
 ```
 
-> ทดสอบหลัง deploy ยิง POST ไปที่ URL ของเราเองเท่านั้น ห้ามแตะ `flood-api.rooptanjai.com`
+- หน้าเว็บ อยู่ใน Workers Static Assets ไฟล์ tiles (ใหญ่เกิน 25 MiB) อยู่ใน R2
+- รายงานและโควตาอยู่ใน Durable Object เดียว เก็บ HMAC ของ IP ไม่เก็บ IP จริง
+- ทำไมออกแบบแบบนี้: [ADR 0003](docs/adr/0003-cloudflare-hosting.md) ภาพรวม: [แผนภาพ](docs/diagrams/cloudflare-architecture.html)
 
 ## มีอะไรใน repo
 
+**API และฟีเจอร์รายงาน**
+
 | ไฟล์ | หน้าที่ |
 | ---- | ------- |
-| `src/districts.ts` | เขตในกรุงเทพฯ ที่ใช้ในคลาส (12 จาก 50 เขต) |
-| `src/stations.ts` | สถานีวัดระดับน้ำ อ่านจาก `data/stations.json` |
-| `data/stations.json` | ระดับน้ำสมมติที่บันทึกไว้ ไม่ใช่ค่าจริง |
-| `src/time.ts` | แสดงเวลาเป็นเวลากรุงเทพฯ |
 | `src/app.ts` | routing ของ API แยกจาก `node:http` เพื่อให้ test ง่าย |
 | `src/reports.ts` | รายงานจากคนในพื้นที่: ตรวจข้อมูล ปิดเบอร์โทร รวมรายงานซ้ำ หมดอายุ |
 | `src/rate-limit.ts` | จำกัด 5 รายงานต่อชั่วโมงต่อ client |
 | `src/read-body.ts` | อ่าน body ไม่เกิน 2048 byte |
+| `src/districts.ts` | เขตในกรุงเทพฯ ที่ใช้ในคลาส (12 จาก 50 เขต) |
+| `src/stations.ts` | สถานีวัดระดับน้ำ อ่านจาก `data/stations.json` |
+| `src/time.ts` | แสดงเวลาเป็นเวลากรุงเทพฯ |
+
+**รันแอป**
+
+| ไฟล์ | หน้าที่ |
+| ---- | ------- |
+| `src/server.ts` | HTTP server สำหรับรันในเครื่อง (`npm run dev`) |
+| `src/worker.ts` | Cloudflare Worker: หน้าเว็บจาก Static Assets, tiles จาก R2, API ผ่าน Durable Object |
+| `src/reports-object.ts` | Durable Object ที่ถือรายงานและ rate limiter เก็บลง SQLite |
 | `src/static-files.ts` | รายการไฟล์หน้าเว็บที่ตายตัว, CSP, header และ byte range ใช้ร่วมกันทั้ง node และ Worker |
 | `src/static.ts` | เสิร์ฟไฟล์ในรายการจากดิสก์ (ตอนรันในเครื่อง) |
-| `scripts/build-districts.mjs` | สร้างรายชื่อและเส้นแบ่งจังหวัด/อำเภอในลุ่มน้ำเจ้าพระยาจาก HDX COD-AB |
-| `data/districts-th.json` | จังหวัดและอำเภอในลุ่มน้ำ พร้อม P-code ชื่อไทย และกึ่งกลาง |
-| `scripts/vendor-map.sh` | ดึงไฟล์แผนที่ที่ปักเวอร์ชันไว้ ตรวจกับ `public/vendor/SHA256SUMS` |
-| `src/server.ts` | HTTP server สำหรับรันในเครื่อง |
-| `src/worker.ts` | Cloudflare Worker: ไฟล์หน้าเว็บจาก Static Assets, tiles จาก R2, API ผ่าน Durable Object (ADR 0003) |
-| `src/reports-object.ts` | Durable Object ที่ถือรายงานและ rate limiter เก็บลง SQLite |
-| `wrangler.jsonc` | config ของ Cloudflare Workers (Workers Builds deploy ทุกครั้งที่ `main` เปลี่ยน) |
+| `wrangler.jsonc` | config ของ Cloudflare Workers |
+
+**หน้าเว็บและข้อมูล**
+
+| ไฟล์ | หน้าที่ |
+| ---- | ------- |
 | `public/` | หน้าเว็บแผนที่ (`index.html`, `app.js`, `app.css`), ข้อมูลจำลอง `demo.js` (เปิดด้วย `/?demo`) |
 | `public/fonts/` | Noto Sans Thai แบบ variable (SIL OFL 1.1, ดู `OFL.txt`) host เองไม่ดึงจาก Google Fonts |
+| `data/stations.json` | ระดับน้ำสมมติที่บันทึกไว้ ไม่ใช่ค่าจริง |
+| `data/districts-th.json` | จังหวัดและอำเภอในลุ่มน้ำ พร้อม P-code ชื่อไทย และกึ่งกลาง |
+| `scripts/build-districts.mjs` | สร้างรายชื่อและเส้นแบ่งจังหวัด/อำเภอในลุ่มน้ำเจ้าพระยาจาก HDX COD-AB |
+| `scripts/vendor-map.sh` | ดึงไฟล์แผนที่ที่ปักเวอร์ชันไว้ ตรวจกับ `public/vendor/SHA256SUMS` |
+
+**เอกสารและ test**
+
+| ไฟล์ | หน้าที่ |
+| ---- | ------- |
+| `docs/intent/`, `docs/specs/`, `docs/plans/` | intent, spec และแผนของฟีเจอร์รายงาน |
+| `docs/adr/` | การตัดสินใจที่ย้อนยาก (แผนที่, NFKC, Cloudflare) |
+| `docs/deploy-cloudflare.md` | คู่มือ deploy ขึ้น Cloudflare |
 | `tests/` | test ด้วย vitest |
 
 กติกาที่ใช้ทั้ง repo
@@ -138,7 +161,7 @@ npx wrangler@4.145.0 dev --var CLIENT_KEY_SECRET:dev-only
 - ความลึกและระดับน้ำเป็น**จำนวนเต็มหน่วยเซนติเมตร**
 - เวลา**เก็บเป็น UTC** และแสดงเป็นเวลากรุงเทพฯ (UTC+7)
 
-## Branch
+## Branch และ tag
 
 - `main` จุดเริ่มต้นของคลาส ยังไม่มีการรายงานน้ำท่วม
 - `class-demo` ผลลัพธ์ที่ทำในคลาสครบทุกขั้น มี tag ตามจุดตรวจ ใช้เทียบกับงานของตัวเอง หรือข้ามไปเมื่อตามไม่ทัน
@@ -155,9 +178,9 @@ npx wrangler@4.145.0 dev --var CLIENT_KEY_SECRET:dev-only
 | `cp7-review` | `REVIEW.md` จำกัดจำนวนรายงาน และปิดเบอร์โทรที่หลุดลง log | W7 |
 | `cp8-hooks` | hook กันไม่ให้ Claude แก้ไฟล์ test และกันการส่งข้อมูลไปที่ระบบรายงานน้ำท่วมจริง | W8 |
 
-> **ระดับความรุนแรงไม่ตรงกับคู่มือ** `severityFor` ใน tag `cp5-loop` ถึง `cp8-hooks` ใช้ 4 ระดับ (ไม่เกิน 10, 30, 50 ซม. และเกิน 50 ซม.) ส่วนคู่มือใช้ 3 ระดับ (1–20, 21–50 และเกิน 50 ซม.) ถ้าเขียนงานของตัวเอง ให้ยึดค่าในคู่มือ ความลึก 25 ซม. เป็นระดับ 2 ทั้งสองแบบ prompt ใน W8 จึงใช้ได้เหมือนกัน
-
 ```bash
 git fetch --tags
 git switch -c my-try cp4-plan   # เริ่มทำต่อจากจุดที่ต้องการ
 ```
+
+> **ระดับความรุนแรงไม่ตรงกับคู่มือ** `severityFor` ใน tag `cp5-loop` ถึง `cp8-hooks` ใช้ 4 ระดับ (ไม่เกิน 10, 30, 50 ซม. และเกิน 50 ซม.) ส่วนคู่มือใช้ 3 ระดับ (1–20, 21–50 และเกิน 50 ซม.) ถ้าเขียนงานของตัวเอง ให้ยึดค่าในคู่มือ ความลึก 25 ซม. เป็นระดับ 2 ทั้งสองแบบ prompt ใน W8 จึงใช้ได้เหมือนกัน
