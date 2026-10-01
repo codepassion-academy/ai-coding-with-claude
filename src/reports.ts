@@ -92,11 +92,13 @@ const HOUSE_NUMBER = /(?:บ้านเลขที่|เลขที่|บ�
 const PHONE_NUMBER = /[+(]?[0-9๐-๙](?:[\s.\-()]*[0-9๐-๙]){8,}/gu
 
 /**
- * Mask house numbers, then phone numbers, with *** (RPT-REQ-005). Aggressive on purpose:
- * a false positive is better than a phone number getting stored. Expects normalized text.
+ * Mask phone numbers, then house numbers, with *** (RPT-REQ-005). Phones go first so a
+ * "บ้าน" before a spaced phone can't eat its first digits and leave the rest under 9.
+ * Aggressive on purpose: a false positive is better than a phone number getting stored.
+ * Expects normalized text.
  */
 export function maskPersonalData(text: string): string {
-  return text.replace(HOUSE_NUMBER, "***").replace(PHONE_NUMBER, "***")
+  return text.replace(PHONE_NUMBER, "***").replace(HOUSE_NUMBER, "***")
 }
 
 const ISO_WITH_OFFSET = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,3}))?(?:Z|([+-])(\d{2}):(\d{2}))$/
