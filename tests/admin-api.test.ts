@@ -208,3 +208,135 @@ describe("GET /admin/reports", () => {
     expect(JSON.stringify(res.body)).not.toContain(IP)
   })
 })
+
+const validReport = {
+  districtId: "sai-mai",
+  landmark: "ปากซอยสายไหม 15",
+  depthCm: 25,
+  observedAt: "2026-09-30T12:20:00Z"
+}
+
+const publicCtx = { now: NOW, clientIp: IP }
+
+function hide(app: ReturnType<typeof setup>["app"], id: string, ctx = authorized) {
+  return app("POST", `/admin/reports/${id}/hide`, undefined, ctx)
+}
+
+function unhide(app: ReturnType<typeof setup>["app"], id: string, ctx = authorized) {
+  return app("POST", `/admin/reports/${id}/unhide`, undefined, ctx)
+}
+
+function items(app: ReturnType<typeof setup>["app"]) {
+  const res = app("GET", "/districts/sai-mai", undefined, publicCtx)
+  return (res.body as { reports: { items: { depthCm: number; reporterCount: number }[] } }).reports.items
+}
+
+describe("POST /admin/reports/:id/hide and /unhide", () => {
+  it("RPT-REQ-013 AC1 hides the only report of sai-mai without deleting it", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1" })])
+    expect(items(app)).toHaveLength(1)
+    const res = hide(app, "r-1")
+    expect(res.status).toBe(200)
+    expect(items(app)).toEqual([])
+    expect(store.all()).toHaveLength(1)
+    expect(store.all()[0]?.hiddenAt).toBe("2026-09-30T12:30:00.000Z")
+  })
+
+  it("RPT-REQ-013 AC1 answers with the report in the admin shape, hiddenAt in Bangkok time", () => {
+    const { app } = setup(TOKEN, [report({ id: "r-1" })])
+    const res = hide(app, "r-1")
+    expect(res.body).toEqual({
+      report: {
+        id: "r-1",
+        districtId: "sai-mai",
+        landmark: "ปากซอยสายไหม 15",
+        depthCm: 25,
+        observedAt: "2026-09-30T19:20:00+07:00",
+        receivedAt: "2026-09-30T19:30:00+07:00",
+        hiddenAt: "2026-09-30T19:30:00+07:00",
+        reporterRef: "a1b2c3d4"
+      }
+    })
+  })
+
+  it("RPT-REQ-013 AC2 hiding the latest report of a group leaves the earlier depth and one reporter", () => {
+    const { app } = setup(TOKEN, [
+      report({ id: "early", depthCm: 20, observedAt: "2026-09-30T12:00:00.000Z", reporterHash: "a".repeat(64) }),
+      report({ id: "late", depthCm: 35, observedAt: "2026-09-30T12:25:00.000Z", reporterHash: "b".repeat(64) })
+    ])
+    expect(items(app)).toMatchObject([{ depthCm: 35, reporterCount: 2 }])
+    hide(app, "late")
+    expect(items(app)).toMatchObject([{ depthCm: 20, reporterCount: 1 }])
+  })
+
+  it("RPT-REQ-013 AC3 unhiding brings the report back and sets hiddenAt to null", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1" })])
+    hide(app, "r-1")
+    const res = unhide(app, "r-1")
+    expect(res.status).toBe(200)
+    expect((res.body as { report: { hiddenAt: unknown } }).report.hiddenAt).toBeNull()
+    expect(items(app)).toHaveLength(1)
+    expect(store.all()[0]?.hiddenAt).toBeNull()
+  })
+
+  it("RPT-REQ-013 AC4 hiding twice answers 200 and keeps the first hiddenAt", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1" })])
+    hide(app, "r-1")
+    const later = new Date(NOW.getTime() + 10 * 60_000)
+    expect(hide(app, "r-1", { ...authorized, now: later }).status).toBe(200)
+    expect(store.all()[0]?.hiddenAt).toBe("2026-09-30T12:30:00.000Z")
+  })
+
+  it("RPT-REQ-013 AC4 unhiding twice answers 200 and the report stays visible", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1", hiddenAt: "2026-09-30T12:00:00.000Z" })])
+    expect(unhide(app, "r-1").status).toBe(200)
+    expect(unhide(app, "r-1").status).toBe(200)
+    expect(store.all()[0]?.hiddenAt).toBeNull()
+  })
+
+  it("RPT-REQ-013 AC4 unhiding a report that was never hidden answers 200", () => {
+    const { app } = setup(TOKEN, [report({ id: "r-1" })])
+    expect(unhide(app, "r-1").status).toBe(200)
+  })
+
+  it.each([hide, unhide])("RPT-REQ-013 AC5 answers 404 unknown report for an id that does not exist (%o)", (action) => {
+    const { app } = setup(TOKEN, [report({ id: "r-1" })])
+    const res = action(app, "nope")
+    expect(res.status).toBe(404)
+    expect(res.body).toEqual({ error: "unknown report" })
+  })
+
+  it("RPT-REQ-014 AC1 does not hide anything without a token", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1" })])
+    const res = hide(app, "r-1", { now: NOW, clientIp: IP } as typeof authorized)
+    expect(res.status).toBe(401)
+    expect(store.all()[0]?.hiddenAt).toBeNull()
+    expect(items(app)).toHaveLength(1)
+  })
+
+  it("RPT-REQ-013 AC8 has no route that deletes a report", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1" })])
+    for (const path of ["/admin/reports", "/admin/reports/r-1", "/admin/reports/r-1/hide", "/reports", "/reports/r-1"]) {
+      expect(app("DELETE", path, undefined, authorized).status, `DELETE ${path}`).toBe(404)
+    }
+    expect(store.all()).toHaveLength(1)
+  })
+
+  it("RPT-REQ-013 AC8 does not hide on a GET", () => {
+    const { app, store } = setup(TOKEN, [report({ id: "r-1" })])
+    expect(app("GET", "/admin/reports/r-1/hide", undefined, authorized).status).toBe(404)
+    expect(store.all()[0]?.hiddenAt).toBeNull()
+  })
+
+  it("RPT-REQ-007 AC7 still counts a hidden report in its sender's quota", () => {
+    const { app } = setup()
+    const ids: string[] = []
+    for (let i = 0; i < 5; i++) {
+      const res = app("POST", "/reports", validReport, publicCtx)
+      expect(res.status).toBe(201)
+      ids.push((res.body as { report: { id: string } }).report.id)
+    }
+    expect(hide(app, ids[0] ?? "").status).toBe(200)
+    expect(app("POST", "/reports", validReport, publicCtx).status).toBe(429)
+  })
+})

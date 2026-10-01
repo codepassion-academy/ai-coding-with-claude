@@ -4,6 +4,7 @@ import { districts } from "./districts.ts"
 import { createMemoryReportStore, type ReportStore } from "./report-store.ts"
 import { hashReporter } from "./reporter.ts"
 import {
+  adminItem,
   adminItems,
   landmarkKey,
   rateLimitStatus,
@@ -50,6 +51,16 @@ export function createApp(deps: AppDeps): typeof handle {
 
       if (method === "GET" && path === "/admin/reports") {
         return { status: 200, body: { reports: adminItems(deps.store.all(), ctx.now) } }
+      }
+      const toggle = path.match(/^\/admin\/reports\/([^/]+)\/(hide|unhide)$/)
+      if (method === "POST" && toggle) {
+        const [, id = "", action] = toggle
+        const current = deps.store.all().find((r) => r.id === id)
+        if (!current) return { status: 404, body: { error: "unknown report" } }
+        // Repeating the action changes nothing: the first hiddenAt stays, an unhidden report stays unhidden.
+        const wanted = action === "hide" ? (current.hiddenAt ?? ctx.now.toISOString()) : null
+        const report = wanted === current.hiddenAt ? current : (deps.store.setHidden(id, wanted) ?? current)
+        return { status: 200, body: { report: adminItem(report) } }
       }
       return { status: 404, body: { error: "not found" } }
     }

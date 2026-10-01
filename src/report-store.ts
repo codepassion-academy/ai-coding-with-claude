@@ -6,6 +6,8 @@ import type { Report } from "./reports.ts"
 export interface ReportStore {
   all(): readonly Report[]
   add(report: Report): void
+  /** Hide (an ISO time) or unhide (null) one report. The report is replaced, never mutated. Unknown id: undefined. */
+  setHidden(id: string, hiddenAt: string | null): Report | undefined
 }
 
 type StoreFile = { version: 1; reports: Report[] }
@@ -16,6 +18,14 @@ export function createMemoryReportStore(): ReportStore {
     all: () => reports,
     add: (report) => {
       reports.push(report)
+    },
+    setHidden: (id, hiddenAt) => {
+      const index = reports.findIndex((r) => r.id === id)
+      const current = reports[index]
+      if (!current) return undefined
+      const updated = { ...current, hiddenAt }
+      reports[index] = updated
+      return updated
     }
   }
 }
@@ -35,6 +45,13 @@ export function createFileReportStore(path: string): ReportStore {
 
   return {
     all: () => reports,
-    add: (report) => save([...reports, report])
+    add: (report) => save([...reports, report]),
+    setHidden: (id, hiddenAt) => {
+      const current = reports.find((r) => r.id === id)
+      if (!current) return undefined
+      const updated = { ...current, hiddenAt }
+      save(reports.map((r) => (r === current ? updated : r)))
+      return updated
+    }
   }
 }

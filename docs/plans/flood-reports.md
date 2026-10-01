@@ -2,7 +2,7 @@
 
 ## Context
 
-Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แต่ยังไม่มีโค้ดของฟีเจอร์นี้เลย (`src/` มีแค่ `app.ts`, `server.ts`, `districts.ts`, `stations.ts`, `time.ts`) คืนนี้ทำแค่เส้นทางที่บางที่สุดให้วิ่งครบทุกชั้น (HTTP → `handle` → logic → `ReportStore` → ไฟล์ → test) แล้วเติมกติกาหลักของการรับและแสดงรายงาน ส่วนผู้ดูแลระบบ หน้าเว็บ และ log อยู่ใต้ Later
+Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แต่ยังไม่มีโค้ดของฟีเจอร์นี้เลย (`src/` มีแค่ `app.ts`, `server.ts`, `districts.ts`, `stations.ts`, `time.ts`) คืนนี้ทำแค่เส้นทางที่บางที่สุดให้วิ่งครบทุกชั้น (HTTP → `handle` → logic → `ReportStore` → ไฟล์ → test) แล้วเติมกติกาหลักของการรับและแสดงรายงาน ขั้น 9 เพิ่มช่องทางผู้ดูแลระบบ ส่วนหน้าเว็บ และ log อยู่ใต้ Later
 
 - ที่มา: `docs/specs/flood-reports.md`
 - วันที่เขียน: 2026-09-30
@@ -63,6 +63,16 @@ Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แ
 - ไฟล์: แก้ `src/reports.ts` (`landmarkKey`, `LANDMARK_PREFIXES`, `MERGE_WINDOW_MS`, จัดกลุ่มใน `visibleItems`, `reporterCount` นับแฮชไม่ซ้ำ), `src/app.ts` (เก็บ `landmarkKey` จริง), `tests/reports.test.ts`, `tests/reports-api.test.ts`
 - test ก่อน: 8a RPT-REQ-011 AC5, AC6, AC8 จากนั้น 8b RPT-REQ-011 AC1 ถึง AC4, AC7, AC9, AC10
 
+### ผู้ดูแลระบบ (ขั้น 9)
+
+**9. [x] ช่องทาง `/admin/` ที่ต้องมี token แล้วซ่อน/ยกเลิกซ่อนรายงาน** (สอง commit: 9a ประตูตรวจ token พร้อม `GET /admin/reports`, 9b ซ่อนและยกเลิกซ่อน) ทำ 9a ก่อนเสมอ เพราะ route ที่แก้ข้อมูลต้องไม่เคยมีอยู่โดยไม่มีประตู
+
+- 9a ไฟล์: สร้าง `src/admin.ts` (`checkAdminAuth`: เทียบ token ด้วย `timingSafeEqual` หลังแฮช SHA-256 ทั้งสองฝั่งให้ความยาวเท่ากัน, `createAuthFailureLimiter` นับความผิดต่อ IP ในหน่วยความจำ 10 ครั้งต่อ 15 นาที), `tests/admin.test.ts` แก้ `src/reports.ts` (`adminItems(reports, now)`: รับใน 24 ชั่วโมงล่าสุด เรียง `receivedAt` ใหม่ไปเก่า `reporterRef` เป็น 8 ตัวแรกของแฮช), `src/app.ts` (`Context.authorization?`, `AppDeps.adminToken?`, ทุก path ที่ขึ้นต้น `/admin/` ผ่านประตูก่อน ลำดับ 503, 429, 401 แล้วค่อยค้นรายงาน, `WWW-Authenticate: Bearer` ใน 401), `src/server.ts` (อ่าน `ADMIN_TOKEN`, ส่ง `authorization` จาก header, เตือนใน log ถ้าตั้งแต่สั้นกว่า 16 ตัวอักษรโดยไม่พิมพ์ค่า), `tests/admin-api.test.ts`
+- 9a test ก่อน: RPT-REQ-014 AC1 ถึง AC5 และ AC8, RPT-REQ-013 AC6 และ AC7 (`GET /admin/reports` เป็น route แรกที่ใช้พิสูจน์ AC3 ว่า token ถูกได้ 200) token ใน test สร้างเองด้วย `randomBytes` ห้ามเขียนค่าตายตัว
+- 9b ไฟล์: แก้ `src/report-store.ts` (`setHidden(id, hiddenAt)` ทั้งสอง store แทนที่ออบเจ็กต์ใหม่ ไม่แก้ของเดิม file store เขียนไฟล์แล้วค่อยเปลี่ยนสำเนา), `src/app.ts` (`POST /admin/reports/:id/hide` และ `/unhide` ส่ง `hiddenAt` ตามสถานะเดิมเพื่อให้ซ้ำแล้วไม่เปลี่ยน), `tests/report-store.test.ts` (เติม `setHidden` เข้า contract test เดิม), `tests/admin-api.test.ts`
+- 9b test ก่อน: RPT-REQ-013 AC1 ถึง AC5 และ AC8, RPT-REQ-007 AC7, RPT-REQ-014 AC1 ส่วน "รายงานไม่ถูกซ่อน" `visibleItems` กรอง `hiddenAt` และ `rateLimitStatus` นับรายงานที่ซ่อนอยู่แล้ว (RPT-REQ-013 AC2 และ RPT-REQ-007 AC7 จึงน่าจะเขียวทันทีโดยไม่ต้องแก้โค้ด) ให้ยืนยันว่าเขียวเพราะพฤติกรรมจริงด้วยการลองทำให้แดงชั่วคราว (เช่นเอาเงื่อนไข `hiddenAt === null` ออก) แล้วคืนค่า
+- ตรวจด้วยมือ: `ADMIN_TOKEN=<สุ่มเอง 16 ตัวขึ้นไป> npm run dev` แล้ว `curl` ไป `localhost:3000/admin/reports` ทั้งแบบไม่มี header (ต้อง 401) และแบบมี `Authorization: Bearer` ซ่อนรายงานของ `sai-mai` แล้ว `GET /districts/sai-mai` ต้องไม่เห็น restart แล้ว `hiddenAt` ยังอยู่ใน `var/reports.json`
+
 ## ความเสี่ยง
 
 - **ขั้น 1 ถึง 5 ยังไม่มีโควตา และขั้น 1 ถึง 3 แทบไม่ตรวจ input** ห้ามเปิดเซิร์ฟเวอร์ให้เครื่องอื่นเข้าถึงจนกว่าจบขั้น 6 ทดสอบกับ `localhost` หรือเรียก `handle` เท่านั้น ห้ามยิง `flood-api.rooptanjai.com`
@@ -71,7 +81,11 @@ Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แ
 - **regex เบอร์โทร** ต้องรองรับเลขไทย ตัวคั่นหนึ่งตัว และ `+` นำหน้า โดยไม่โดน `"สายไหม 15 แยก 3"` เลขสั้นสองชุดที่คั่นด้วยช่องว่างเดียวและรวมกันถึง 9 หลัก (เช่น `101 1234567`) จะถูกปิดไปด้วย ซึ่งตรงตาม spec
 - **ข้อมูลที่เขียนก่อนขั้น 8** มี `landmarkKey` เท่ากับ `landmark` และก่อนขั้น 6 มี `reporterHash: null` ให้ลบ `var/reports.json` หลังจบขั้น 8
 - **ขั้น 6 และ 8 ใหญ่ที่สุด** ถ้า diff เกินจะรีวิวใน 5 นาที ให้แยก `src/reporter.ts` เป็น commit ของตัวเอง เหมือนที่แยก 8a กับ 8b
-- **`ReportStore` คืนนี้มีแค่ `all` กับ `add`** `setHidden` และ `purgeReporterHashes` เพิ่มทีหลัง contract test ต้องเขียนให้เติม method ได้โดยไม่รื้อ
+- **`ReportStore` มีแค่ `all` กับ `add` จนถึงขั้น 8** `setHidden` เข้าในขั้น 9b ส่วน `purgeReporterHashes` เพิ่มทีหลัง contract test ต้องเติม method ได้โดยไม่รื้อ
+- **ขั้น 9 เปิดช่องทางที่แก้ข้อมูลได้** token ผ่าน HTTP ธรรมดาไม่มีการเข้ารหัส ห้ามเปิดเซิร์ฟเวอร์ให้เครื่องอื่นเข้าถึงจนกว่าจะอยู่หลัง TLS ทดสอบกับ `localhost` เท่านั้น และอย่าวาง token จริงใน shell history ที่แชร์ รวมถึงหน้าจอที่ใช้สอน
+- **ขั้น 9 ยังไม่มี log** RPT-REQ-014 AC7 (log ไม่มี token) และเหตุการณ์ `report.hidden`, `report.unhidden`, `admin.auth_failed` ตกไปอยู่กับขั้น log ใน Later ดังนั้นระหว่างนี้การซ่อนรายงานไม่มีร่องรอยนอกจาก `hiddenAt` ใน store
+- **RPT-REQ-014 AC6 ตรวจด้วย test ไม่ได้ตรงๆ** test ไม่รู้ token จริงของผู้ดูแล จึงตรวจได้แค่ว่าใน `src/` ชื่อ `ADMIN_TOKEN` ปรากฏเฉพาะใน `src/server.ts` ในรูป `process.env.ADMIN_TOKEN` และไม่มีสตริงยาวตายตัวผูกกับมัน ส่วนที่เหลือเป็นการตรวจด้วยตาก่อน commit
+- **`DELETE /admin/...` (RPT-REQ-013 AC8)** ประตูตอบ 401 ก่อนทุก path ใต้ `/admin/` (RPT-REQ-014 AC8) จึงต้องส่ง token ที่ถูกใน test ของ AC8 จึงจะได้ 404
 
 ## เรื่องที่ยังไม่แน่ใจ
 
@@ -79,14 +93,16 @@ Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แ
 - RPT-REQ-007 AC8 ทำให้ `handle` ตัวเดิม (context มีแค่ `now`) ตอบ 500 กับ `POST /reports` เสมอ ตรงตาม spec แต่ต้องแน่ใจว่า `server.ts` ส่ง `clientIp` ทุกคำขอ รวมถึงกรณี `req.socket.remoteAddress` เป็น `undefined`
 - ถ้าไม่ตั้ง `IP_HASH_SECRET` secret จะสุ่มใหม่ทุกครั้งที่ restart โควตาจึงรีเซ็ต และ `tsx watch` restart บ่อยตอนพัฒนา ควรมี `.env` ตัวอย่างหรือไม่ยังไม่ได้ตัดสิน
 - RPT-REQ-015 AC6 ตรวจด้วยการอ่านซอร์ส `src/app.ts` ใน test ซึ่งไม่จับ import ทางอ้อม จะตรวจแค่นี้หรือไล่ import ต่อยังไม่ได้ตัดสิน
+- ขั้น 9: spec ไม่บอกว่า route ผู้ดูแลที่ไม่มี `ctx.clientIp` ต้องตอบอะไร (จำกัดความผิดต่อ IP ไม่ได้) ร่างนี้เลือกตอบ 500 `client address unavailable` เหมือน `POST /reports` ต้องยืนยันก่อนเขียน test
+- ขั้น 9: spec ไม่ระบุ header `Retry-After` กับ `retryAfterSeconds` ของ 429 ฝั่งผู้ดูแล ร่างนี้ทำเหมือน `POST /reports` และไม่บอกว่าตัวนับรีเซ็ตเมื่อยืนยันตัวสำเร็จ (ใช้หน้าต่างเลื่อน 15 นาทีนับเฉพาะครั้งที่ผิด) และ `Bearer` ถือเป็นตัวพิมพ์ใหญ่ตามตัวอย่างใน spec เท่านั้น
+- ขั้น 9: `hiddenAt` ใน `GET /admin/reports` ร่างนี้แสดงเป็นเวลากรุงเทพฯ เหมือน `observedAt` และ `receivedAt` (spec แสดงตัวอย่างแค่ค่า `null`) ส่วนใน store เป็น UTC ตาม RPT-REQ-013 AC1
 - Node ให้ที่อยู่ socket เป็น `::ffff:127.0.0.1` ได้บนเครื่อง dual-stack `normalizeIp` ในขั้น 6 ครอบคลุมกรณีนี้ (RPT-REQ-008 AC4) แต่ยังไม่ได้ลองบน Windows เครื่องนี้
 
 ## Later
 
-- ผู้ดูแลระบบ: RPT-REQ-013 (ซ่อน ยกเลิกซ่อน `GET /admin/reports`, `setHidden`), RPT-REQ-014 (`src/admin.ts`, bearer token, `timingSafeEqual`, ตัวนับยืนยันตัวผิด), RPT-REQ-007 AC7
 - ล้างแฮชหลัง 24 ชั่วโมง: RPT-REQ-008 AC5 (`purgeReporterHashes` และตัวตั้งเวลาใน `server.ts`), AC7 (`TRUST_PROXY`)
 - ความทนทานของ file store: RPT-REQ-015 AC4 (ไฟล์เสีย), AC5 (เขียนไม่ได้ ย้อนสำเนาในหน่วยความจำ ตอบ 500)
-- log: RPT-REQ-017 (`AppDeps.log`, เหตุการณ์ `report.accepted` และอื่นๆ), RPT-REQ-006 AC5 ส่วน log
+- log: RPT-REQ-017 (`AppDeps.log`, เหตุการณ์ `report.accepted` และอื่นๆ รวม `report.hidden`, `report.unhidden`, `admin.auth_failed`), RPT-REQ-006 AC5 ส่วน log, RPT-REQ-014 AC7
 - หน้าเว็บ: RPT-REQ-016 (`public/report.html`, `public/report.js`, CSP), RPT-REQ-012 AC5
 - ขอบระบบ HTTP: RPT-REQ-019 (จำกัด body 10 KB, 413, method อื่นของ `/reports` ตอบ 404)
 - ตรวจรวม: RPT-REQ-018 AC3 (เทียบ body ของ `GET /districts` ทั้งก้อน), RPT-REQ-020 (ค้น `rooptanjai`, `fetch`)
