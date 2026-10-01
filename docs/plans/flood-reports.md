@@ -19,18 +19,18 @@ Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แ
 
 ### Tracer bullet (ขั้น 1 ถึง 3)
 
-**1. `POST /reports` รับรายงานที่ถูกต้องลง memory store**
+**1. [x] `POST /reports` รับรายงานที่ถูกต้องลง memory store**
 
 - ไฟล์: สร้าง `src/reports.ts` (type `Report`, `REPORT_LABEL`, `SEVERITY_THRESHOLDS`, `severityOf`), `src/report-store.ts` (`ReportStore` มีแค่ `all` กับ `add`, `createMemoryReportStore`), `tests/reports-api.test.ts`, `tests/reports.test.ts` แก้ `src/app.ts` (`createApp({ store })`, `handle` เดิมผูกกับ memory store ว่าง, `Context` เพิ่ม `clientIp?`)
 - test ก่อน: RPT-REQ-001 AC1 (201, `notice`, `label`, `severity: "medium"`, `observedAt` เวลากรุงเทพฯ), AC2 (store เก็บ UTC), AC4 (body ไม่ใช่ object ได้ 400 `fields: ["body"]`), RPT-REQ-012 AC1 ถึง AC4, RPT-REQ-018 AC2
 - ของชั่วคราวในขั้นนี้: ตรวจแค่ `typeof` ของ 4 ฟิลด์, `reporterHash: null`, `landmarkKey` เท่ากับ `landmark`
 
-**2. `GET /districts/:id` แสดงคีย์ `reports`**
+**2. [x] `GET /districts/:id` แสดงคีย์ `reports`**
 
 - ไฟล์: แก้ `src/reports.ts` (`visibleItems(reports, districtId, now)` หนึ่งรายงานต่อหนึ่งรายการ `reporterCount: 1`), `src/app.ts`, `tests/reports-api.test.ts`
 - test ก่อน: RPT-REQ-009 AC1, AC2, AC3, AC4, AC5, AC7
 
-**3. file store และต่อเข้า `server.ts`**
+**3. [x] file store และต่อเข้า `server.ts`**
 
 - ไฟล์: แก้ `src/report-store.ts` (`createFileReportStore(path)` เขียน `<path>.tmp` แล้ว `renameSync`, รูปไฟล์ `{ version: 1, reports }`), `src/server.ts` (อ่าน `REPORTS_FILE`, เรียก `createApp`, ส่ง `clientIp` จาก socket), `.gitignore` (เพิ่ม `var/`) สร้าง `tests/report-store.test.ts`
 - test ก่อน: RPT-REQ-015 AC1 (contract test ชุดเดียวรันทั้งสอง store), AC2, AC3, AC6 (อ่าน `src/app.ts` แล้วไม่พบ `node:fs`), AC7
@@ -38,27 +38,27 @@ Spec `docs/specs/flood-reports.md` กำหนด RPT-REQ-001 ถึง 020 แ
 
 ### กติกาหลัก (ขั้น 4 ถึง 8)
 
-**4. ตรวจเขต ความลึก และเวลาที่เห็น**
+**4. [x] ตรวจเขต ความลึก และเวลาที่เห็น**
 
 - ไฟล์: แก้ `src/time.ts` (`parseIsoInstant`), `src/reports.ts` (`validateReportInput` คืนชื่อฟิลด์ที่ผิดทั้งหมด), `src/app.ts`, `tests/reports.test.ts`, `tests/reports-api.test.ts`
 - test ก่อน: RPT-REQ-002 AC1 ถึง AC4, RPT-REQ-003 AC1 ถึง AC4, RPT-REQ-004 AC1 ถึง AC6, RPT-REQ-001 AC3, RPT-REQ-005 AC6 และ AC7
 
-**5. จุดสังเกต และปิดเบอร์โทร**
+**5. [x] จุดสังเกต และปิดเบอร์โทร**
 
 - ไฟล์: แก้ `src/reports.ts` (normalize NFC ยุบช่องว่าง ตรวจความยาวเป็น code point, `maskPhoneNumbers`, `PHONE_MASK`), `src/app.ts`, `tests/reports.test.ts`, `tests/reports-api.test.ts`
 - test ก่อน: RPT-REQ-005 AC1 ถึง AC5, RPT-REQ-006 AC1 ถึง AC4 และ AC6, AC5 เฉพาะส่วนไฟล์เก็บรายงาน (ส่วน log ไป Later)
 
-**6. แฮชผู้ส่ง และโควตา 5 รายงานต่อชั่วโมง**
+**6. [x] แฮชผู้ส่ง และโควตา 5 รายงานต่อชั่วโมง**
 
 - ไฟล์: สร้าง `src/reporter.ts` (`normalizeIp`, `hashReporter`), `tests/reporter.test.ts` แก้ `src/reports.ts` (`rateLimitStatus`), `src/app.ts` (`AppDeps.ipHashSecret`, `Response.headers`, ตรวจโควตาก่อนตรวจเนื้อหา), `src/server.ts` (อ่าน `IP_HASH_SECRET`, ส่ง header จาก `Response`), `tests/reports-api.test.ts`
 - test ก่อน: RPT-REQ-008 AC1 ถึง AC4 และ AC6, RPT-REQ-007 AC1 ถึง AC6 และ AC8, RPT-REQ-001 AC5
 
-**7. อายุรายงาน 6 ชั่วโมง และ `minutesAgo`**
+**7. [x] อายุรายงาน 6 ชั่วโมง และ `minutesAgo`**
 
 - ไฟล์: แก้ `src/reports.ts` (`REPORT_TTL_MS`, กรองใน `visibleItems`, เรียงใหม่ไปเก่า), `tests/reports.test.ts`
 - test ก่อน: RPT-REQ-010 AC1 ถึง AC4, RPT-REQ-009 AC6
 
-**8. รวมรายงานซ้ำ** (สอง commit: 8a `landmarkKey`, 8b การรวม)
+**8. [x] รวมรายงานซ้ำ** (สอง commit: 8a `landmarkKey`, 8b การรวม)
 
 - ไฟล์: แก้ `src/reports.ts` (`landmarkKey`, `LANDMARK_PREFIXES`, `MERGE_WINDOW_MS`, จัดกลุ่มใน `visibleItems`, `reporterCount` นับแฮชไม่ซ้ำ), `src/app.ts` (เก็บ `landmarkKey` จริง), `tests/reports.test.ts`, `tests/reports-api.test.ts`
 - test ก่อน: 8a RPT-REQ-011 AC5, AC6, AC8 จากนั้น 8b RPT-REQ-011 AC1 ถึง AC4, AC7, AC9, AC10
