@@ -195,10 +195,17 @@ banner "Cloudflare Workers setup (ADR 0003)"
 
 # ── 1 ─────────────────────────────────────────────────────────────────────
 stage "Log in to Cloudflare"
-say "Wrangler opens a browser to log in. Use the account that will own the demo."
-step "Approve the Wrangler access request in the browser."
-"${WRANGLER[@]}" login
-"${WRANGLER[@]}" whoami
+# Already authenticated (an earlier login, or CLOUDFLARE_API_TOKEN exported)? Then skip the browser OAuth,
+# which fails with "No CSRF value" when the browser blocks Cloudflare's cookie (e.g. Brave Shields).
+if "${WRANGLER[@]}" whoami; then
+  note "Already authenticated: skipping wrangler login."
+else
+  say "Wrangler opens a browser to log in. Use the account that will own the demo."
+  step "Approve the Wrangler access request in the browser."
+  note "OAuth error 'No CSRF value'? Allow cookies for dash.cloudflare.com, or export CLOUDFLARE_API_TOKEN and re-run."
+  "${WRANGLER[@]}" login
+  "${WRANGLER[@]}" whoami
+fi
 step "Copy the Account ID of the account to deploy to (32 hex characters, shown above)."
 ask CLOUDFLARE_ACCOUNT_ID "Paste the Account ID:"
 write_env CLOUDFLARE_ACCOUNT_ID "$CLOUDFLARE_ACCOUNT_ID"
