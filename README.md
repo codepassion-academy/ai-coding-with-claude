@@ -109,7 +109,15 @@ push main → Workers Builds: lint → test → deploy → URL เดิมอ�
 
 - หน้าเว็บ อยู่ใน Workers Static Assets ไฟล์ tiles (ใหญ่เกิน 25 MiB) อยู่ใน R2
 - รายงานและโควตาอยู่ใน Durable Object เดียว เก็บ HMAC ของ IP ไม่เก็บ IP จริง
-- ทำไมออกแบบแบบนี้: [ADR 0003](docs/adr/0003-cloudflare-hosting.md) ภาพรวม: [แผนภาพ](docs/diagrams/cloudflare-architecture.html)
+- ทำไมออกแบบแบบนี้: [ADR 0003](docs/adr/0003-cloudflare-hosting.md)
+
+![ภาพรวม: push main → Workers Builds → Worker ซึ่งส่งไฟล์หน้าเว็บจาก Static Assets, ไฟล์ tiles จาก R2 และ API ไปที่ Durable Object](docs/diagrams/cloudflare-architecture.svg)
+
+ส่งรายงานหนึ่งครั้ง: Worker ตัดขนาด แปลง JSON และ hash IP ก่อน Durable Object ตรวจโควตา ตรวจข้อมูล รวมรายงานซ้ำ แล้วบันทึกลง SQLite เฉพาะเมื่อรับรายงาน
+
+![ลำดับการส่งรายงาน: ผู้รายงาน → Worker → Durable Object → SQLite แล้วตอบ 201 พร้อม NOTICE](docs/diagrams/report-request-sequence.svg)
+
+ต้นฉบับแก้ได้ (HTML): [ภาพรวม](docs/diagrams/cloudflare-architecture.html) · [ลำดับการส่งรายงาน](docs/diagrams/report-request-sequence.html)
 
 ## มีอะไรใน repo
 
