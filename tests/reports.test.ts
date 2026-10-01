@@ -274,6 +274,44 @@ describe("dedupe in the store (RPT-REQ-010)", () => {
   })
 })
 
+describe("merge/expiry window (RPT-REQ-010, 011, 012) — spec uses DISPLAY_TTL_MS (6h), not 2h", () => {
+  const t0 = now
+  const withinWindow = new Date(t0.getTime() + DISPLAY_TTL_MS - 1)
+  const pastWindow = new Date(t0.getTime() + DISPLAY_TTL_MS)
+  const body = (seenAtIso: string, depth: string) => ({ landmark: "ปากซอย 7", depth, seenAt: seenAtIso })
+
+  it("same spot, same district, within the window merges into one report with the latest depth", () => {
+    const store = createReportStore()
+    const first = store.submit(body(t0.toISOString(), "ankle"), "lat-phrao", "test", t0)
+    expect(first).toMatchObject({ ok: true, merged: false })
+
+    const second = store.submit(body(withinWindow.toISOString(), "waist"), "lat-phrao", "test2", withinWindow)
+    expect(second).toMatchObject({
+      ok: true,
+      merged: true,
+      report: { depthLevel: "waist", depthCm: 100, confirmations: 2 }
+    })
+    expect(store.activeIn("lat-phrao", withinWindow)).toHaveLength(1)
+  })
+
+  it("exceeding the window by even 1ms creates a new report instead of merging", () => {
+    const store = createReportStore()
+    store.submit(body(t0.toISOString(), "ankle"), "lat-phrao", "test", t0)
+
+    const outside = store.submit(body(pastWindow.toISOString(), "waist"), "lat-phrao", "test2", pastWindow)
+    expect(outside).toMatchObject({ ok: true, merged: false })
+    expect(store.activeIn("lat-phrao", pastWindow)).toHaveLength(1) // old one purged, new one stands alone
+  })
+
+  it("a report disappears from the list once its last confirmation is more than 6h old", () => {
+    const store = createReportStore()
+    store.submit(body(t0.toISOString(), "knee"), "lat-phrao", "test", t0)
+    expect(store.activeIn("lat-phrao", withinWindow)).toHaveLength(1)
+    expect(store.activeIn("lat-phrao", pastWindow)).toHaveLength(0)
+    expect(store.size()).toBe(0)
+  })
+})
+
 describe("store capacity (RPT-REQ-014)", () => {
   const seenAt = "2026-09-30T12:00:00Z"
   const body = (landmark: string) => ({ landmark, depth: "knee", seenAt })
