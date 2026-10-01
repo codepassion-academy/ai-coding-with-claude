@@ -35,7 +35,7 @@ status: accepted
 - **ทุก request นับรวมใน 100k request/วันของ Worker รวมไฟล์หน้าเว็บ:** ใช้ `run_worker_first` เพื่อให้รายการไฟล์ตายตัวใน `src/static-files.ts` เป็นทางเดียวที่เข้าถึงไฟล์ได้ ข้อ "static assets ฟรีไม่จำกัด" ใน research จึงไม่ใช้กับ repo นี้
 - **Workers Logs ปิดไว้ (`observability.enabled: false`):** log ของ Cloudflare บันทึกรายละเอียด request ซึ่งอาจมี IP ขัดกับ RPT-REQ-013
 - **Tile range request ก็นับรวมใน 100k request/วันเช่นกัน:** แผนที่หนึ่งครั้งยิงหลายสิบ request พอสำหรับ demo ถ้าคนเข้ามากขึ้นให้พิจารณา R2 custom domain ใหม่
-- **`CF-Connecting-IP` ถูก Cloudflare เขียนทับเสมอหรือไม่ ยังไม่มี docs ยืนยัน:** ต้องมี test ที่ยืนยันว่าส่ง header นี้ปลอมแล้วไม่เปลี่ยนโควตาบน URL ที่ deploy จริง
+- **ปลอม `CF-Connecting-IP` ไม่ได้ (ทดสอบบน `namthuam.savepong.workers.dev` 2026-10-01):** request ที่ client ใส่ header นี้มาเองถูก Cloudflare ปฏิเสธที่ edge ด้วย `403` error code `1000` ก่อนถึง Worker ส่วน POST ปกติที่เปลี่ยน `X-Forwarded-For` ทุกครั้งได้ 201, 200 ×4 แล้ว 429 `Retry-After: 3600` ตาม RPT-REQ-008/009 ไม่ได้อยู่ใน docs ของ Cloudflare ถ้าวันหนึ่งพฤติกรรมเปลี่ยน ต้องทดสอบใหม่
 - **HMAC secret:** หมุน secret แล้วโควตาเดิมทั้งหมดถูกรีเซ็ต ยอมรับได้
 - **ยังไม่มี docs ยืนยันว่า build command ที่ fail จะหยุด deploy ใน Workers Builds:** ต้องลองครั้งเดียวด้วย test ที่ตั้งใจให้ fail ก่อนเชื่อ
 - **ทดสอบหลัง deploy ยิง POST ไปที่ URL ของเราเองเท่านั้น** ห้ามแตะ `flood-api.rooptanjai.com`
