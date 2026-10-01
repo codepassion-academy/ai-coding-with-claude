@@ -1,0 +1,24 @@
+// Cloudflare Workers config (ADR 0003). Deployed by .github/workflows/deploy.yml when main changes.
+{
+  "name": "namthuam",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "preview_urls": false,
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    // The Worker sees every request, so the fixed file list in src/static-files.ts stays the only way in.
+    "run_worker_first": true,
+    "html_handling": "none",
+    "not_found_handling": "none"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "REPORTS", "class_name": "ReportsObject" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReportsObject"] }],
+  "r2_buckets": [{ "binding": "TILES", "bucket_name": "namthuam-tiles" }],
+  // Off: Workers Logs record request details, and no IP may reach a log (RPT-REQ-013).
+  "observability": { "enabled": false }
+}

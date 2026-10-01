@@ -8,3 +8,6 @@ CLAUDE.local.md
 .hermes/
 .kiro
 .DS_Store
+# Cloudflare: local secrets and wrangler state
+.dev.vars*
+.wrangler/

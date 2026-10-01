@@ -1,5 +1,5 @@
 import { basinDistricts, basinProvinces, districts, resolveDistrictId, resolveReportDistrictId } from "./districts.ts"
-import { createReportStore, toPublicReport, type ReportStore } from "./reports.ts"
+import { createReportStore, toPublicReport, type Report, type ReportStore } from "./reports.ts"
 import { latestReading, stationsIn } from "./stations.ts"
 import { toBangkokIso } from "./time.ts"
 
@@ -62,7 +62,14 @@ export function handle(method: string, path: string, body: unknown, ctx: Context
 
   // Every active รายงาน in the basin, with its district, for the north tab. Never coordinates (RPT-REQ-013).
   if (method === "GET" && path === "/basin/reports") {
-    const all = [...basinDistricts.keys()].flatMap((id) => reports.activeIn(id, ctx.now))
+    // One purge and sort for the whole basin, not one per district: the Worker has 10 ms of CPU (ADR 0003).
+    const byDistrict = new Map<string, Report[]>()
+    for (const r of reports.active(ctx.now)) {
+      const list = byDistrict.get(r.districtId)
+      if (list) list.push(r)
+      else byDistrict.set(r.districtId, [r])
+    }
+    const all = [...basinDistricts.keys()].flatMap((id) => byDistrict.get(id) ?? [])
     return { status: 200, body: { notice: NOTICE, reports: all.map((r) => ({ ...toPublicReport(r, ctx.now), districtId: r.districtId })) } }
   }
 

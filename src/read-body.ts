@@ -41,3 +41,32 @@ export function readBody(stream: Readable, maxBytes = MAX_BODY_BYTES): Promise<R
     })
   })
 }
+
+/**
+ * Same rule for a web `ReadableStream` (Cloudflare Worker, ADR 0003). Counts the bytes that arrive instead of
+ * trusting `Content-Length`, and cancels the stream past the limit.
+ */
+export async function readWebBody(body: ReadableStream<Uint8Array> | null, maxBytes = MAX_BODY_BYTES): Promise<ReadBodyResult> {
+  if (!body) return { ok: true, raw: "" }
+  const reader = body.getReader()
+  const chunks: Uint8Array[] = []
+  let size = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    size += value.byteLength
+    if (size > maxBytes) {
+      chunks.length = 0
+      await reader.cancel()
+      return { ok: false, status: 413 }
+    }
+    chunks.push(value)
+  }
+  const bytes = new Uint8Array(size)
+  let offset = 0
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset)
+    offset += chunk.byteLength
+  }
+  return { ok: true, raw: new TextDecoder().decode(bytes) }
+}
