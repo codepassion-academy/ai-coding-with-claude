@@ -13,20 +13,8 @@
   // The whole demo scene (city-wide) fits this view; the normal view starts a little tighter.
   const DEMO_VIEW = { center: [100.635, 13.8], zoom: 10.9 }
 
-  const ERRORS = {
-    invalid_body: "ส่งข้อมูลไม่ครบ ลองใหม่อีกครั้ง",
-    unknown_field: "ส่งข้อมูลไม่ถูกรูปแบบ ลองใหม่อีกครั้ง",
-    landmark_invalid: "จุดสังเกตต้องยาว 2–80 ตัวอักษร อยู่ในบรรทัดเดียว และต้องมีอย่างอื่นนอกจากเบอร์โทรหรือเลขที่บ้าน",
-    depth_invalid: "เลือกระดับน้ำ: ข้อเท้า เข่า หรือเอว",
-    seen_at_invalid: "เวลาที่เห็นไม่ถูกต้อง",
-    seen_at_future: "เวลาที่เห็นอยู่ในอนาคต ลองเช็กนาฬิกาในเครื่อง แล้วเลือก \"15 นาทีก่อน\"",
-    seen_at_too_old: "รับเฉพาะสิ่งที่เห็นภายใน 3 ชั่วโมง",
-    store_full: "ตอนนี้ระบบรับจุดใหม่ไม่ได้ชั่วคราว ถ้าเป็นจุดที่มีคนรายงานแล้ว ส่งชื่อเดิมเพื่อยืนยันได้",
-    payload_too_large: "ข้อความยาวเกินไป",
-    "unknown district": "ไม่พบเขตนี้",
-    "invalid JSON": "ส่งข้อมูลไม่ถูกรูปแบบ ลองใหม่อีกครั้ง",
-    internal: "ระบบขัดข้อง ลองใหม่อีกครั้ง"
-  }
+  // DOM-free logic (merge, sort, count, place, wording) lives in logic.js so it can be tested.
+  const L = window.NAMTUAM_LOGIC
 
   // Simulated reports and flood areas from demo.js, only when the page is opened with ?demo or toggled on.
   const DEMO = window.NAMTUAM_DEMO
@@ -80,21 +68,9 @@
     return node
   }
 
-  // Same spot every time for the same landmark, so merged reports keep one pin.
-  const hash = (text) => [...text].reduce((h, c) => (Math.imul(h, 31) + c.codePointAt(0)) >>> 0, 7)
-  function place(districtId, key) {
-    const [lon, lat] = CENTRES[districtId] ?? [100.6, 13.78]
-    const h = hash(districtId + key)
-    const angle = ((h % 360) * Math.PI) / 180
-    const radius = 0.004 + ((h >>> 9) % 80) / 10000
-    return [lon + Math.cos(angle) * radius, lat + Math.sin(angle) * radius]
-  }
-  const positionOf = (item) =>
-    item.lngLat ?? (item.kind === "station" ? CENTRES[item.districtId] : place(item.districtId, item.landmark.toLowerCase()))
+  const positionOf = (item) => L.positionOf(item, CENTRES)
 
-  // Same wording as the API's ageLabel (RPT-REQ-011), for the simulated reports.
-  const ageLabelTh = (m) => (m < 1 ? "เห็นเมื่อสักครู่" : m < 60 ? `เห็นเมื่อ ${m} นาทีก่อน` : `เห็นเมื่อ ${Math.floor(m / 60)} ชั่วโมงก่อน`)
-  const bangkokIso = (ms) => new Date(ms + 7 * 60 * 60 * 1000).toISOString().replace(/\.\d{3}Z$/, "+07:00")
+  const { ageLabel: ageLabelTh, bangkokIso } = L
 
   function demoReports() {
     if (!state.demo) return []
@@ -111,11 +87,8 @@
     }))
   }
 
-  /** Real reports plus demo ones, newest first. seenAt always carries +07:00, so it sorts as text. */
   function mergeReports() {
-    state.reports = [...state.realReports, ...demoReports()].sort((a, b) =>
-      a.seenAt < b.seenAt ? 1 : a.seenAt > b.seenAt ? -1 : a.id < b.id ? -1 : 1
-    )
+    state.reports = L.mergeReports(state.realReports, demoReports(), state.demo)
   }
 
   async function api(path, init) {
@@ -155,7 +128,7 @@
   }
 
   const findItem = (key) => [...state.reports, ...state.stations].find((x) => x.key === key)
-  const inFilter = (item) => state.filter === "all" || item.districtId === state.filter
+  const inFilter = (item) => L.inFilter(state.filter)(item)
 
   const confirmText = (n) => (n > 1 ? `ยืนยัน ${n} คน` : "รายงาน 1 คน")
   const depthText = (level, cm) => `ระดับ${DEPTH_TH[level]} ~${cm} cm`
@@ -169,18 +142,16 @@
   }
 
   function renderSummary() {
-    const visible = state.reports.filter(inFilter)
+    const counts = L.countByDepth(state.reports, state.filter)
     for (const level of ["ankle", "knee", "waist"]) {
-      const tile = $("summary").querySelector(`.tile.${level} b`)
-      tile.textContent = String(visible.filter((r) => r.depthLevel === level).length)
+      $("summary").querySelector(`.tile.${level} b`).textContent = String(counts[level])
     }
     $("updated").textContent = `อัปเดต ${bangkokIso(Date.now()).slice(11, 16)} น.`
   }
 
   function renderFilters() {
-    const counts = new Map()
-    for (const r of state.reports) counts.set(r.districtId, (counts.get(r.districtId) ?? 0) + 1)
-    const options = [["all", "ทุกเขต", state.reports.length], ...state.districts.map((d) => [d.id, d.nameTh, counts.get(d.id) ?? 0])]
+    const counts = L.countByDistrict(state.reports)
+    const options = [["all", "ทุกเขต", state.reports.length], ...state.districts.map((d) => [d.id, d.nameTh, counts[d.id] ?? 0])]
     $("filters").replaceChildren(
       ...options.map(([id, name, n]) => {
         const b = el("button", "chip", name)
@@ -539,12 +510,7 @@
     }
 
     if (res.status !== 201 && res.status !== 200) {
-      const code = res.body && res.body.error
-      if (code === "rate_limited") {
-        const minutes = Math.ceil(Number(res.body.retryAfterSec) / 60)
-        return formError(`ส่งได้ 5 ครั้งต่อชั่วโมง ลองใหม่อีกประมาณ ${minutes} นาที`)
-      }
-      return formError(ERRORS[code] ?? "ส่งไม่สำเร็จ ลองใหม่อีกครั้ง")
+      return formError(L.errorMessage(res.body && res.body.error, res.body && res.body.retryAfterSec))
     }
 
     // Saved. From here on the dialog is closed, so problems go to the toast.
