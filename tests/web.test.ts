@@ -94,9 +94,9 @@ describe("web page (GET /)", () => {
     expect(res.headers.get("content-type")).toBe("text/javascript; charset=utf-8")
   })
 
-  it("serves the basin จังหวัด and อำเภอ outlines for the north tab", async () => {
+  it("serves the basin จังหวัด and อำเภอ outlines and the เขื่อน for the north tab", async () => {
     const base = await start()
-    for (const name of ["basin-provinces", "basin-districts"]) {
+    for (const name of ["basin-provinces", "basin-districts", "dams"]) {
       const res = await fetch(`${base}/data/${name}.geojson`)
       expect(res.status, name).toBe(200)
       expect(res.headers.get("content-type"), name).toBe("application/geo+json")

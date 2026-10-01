@@ -11,8 +11,8 @@
   // for reports (spec §5, RPT-REQ-013), so pins sit near these points. Approximate on purpose.
   let CENTRES = {}
   const BOUNDS = { flood: [[100.3, 13.5], [100.95, 14.05]], north: [[97.3, 5.6], [105.7, 20.5]] }
-  // The Chao Phraya basin from Nakhon Sawan to the sea, the area the north tab is about.
-  const BASIN_VIEW = [[99.2, 13.4], [101.6, 16.2]]
+  // The Chao Phraya basin from the big dams (Tak, Uttaradit) down to the sea, the area the north tab is about.
+  const BASIN_VIEW = [[98.6, 13.4], [101.7, 18.0]]
   // The whole demo scene (city-wide) fits this view; the normal view starts a little tighter.
   const DEMO_VIEW = { center: [100.635, 13.8], zoom: 10.9 }
 
@@ -33,7 +33,9 @@
     filter: "all",
     selected: null,
     demo: Boolean(DEMO) && new URLSearchParams(location.search).has("demo"),
-    tab: L.tabFromHash(location.hash)
+    tab: L.tabFromHash(location.hash),
+    // Real เขื่อน as reference points (public/data/dams.geojson), loaded once.
+    dams: []
   }
   const pins = new Map()
   let map = null
@@ -123,6 +125,7 @@
     })
     state.stations = stations
     state.realReports = reports
+    await loadDams().catch(() => {})
     mergeReports()
     if (state.selected && !findItem(state.selected)) {
       state.selected = null
@@ -219,7 +222,7 @@
     if (!map) return
     for (const { marker } of pins.values()) marker.remove()
     pins.clear()
-    if (state.tab !== "flood") return
+    if (state.tab === "north") return renderDamPins()
     const items = [...state.stations.filter(inFilter), ...[...state.reports].reverse().filter(inFilter)]
     for (const item of items) {
       const b = el("button", "pin")
@@ -244,6 +247,42 @@
         .addTo(map)
       pins.set(item.key, { marker, el: b })
     }
+  }
+
+  const ICON_DAM = "M3 15h14M5 15V8l5-3 5 3v7M8 15v-4h4v4"
+
+  /** เขื่อน on the north tab: name and a link to RID only, never a release figure (safety rule 4). */
+  function renderDamPins() {
+    for (const { properties, geometry } of state.dams) {
+      const b = el("button", "pin pin-dam")
+      b.type = "button"
+      b.append(icon(ICON_DAM))
+      const popupText = L.damPopup(properties)
+      b.setAttribute("aria-label", popupText.title)
+      b.addEventListener("click", (e) => {
+        e.stopPropagation()
+        closePopup()
+        popup = new maplibregl.Popup({ offset: 16, maxWidth: "280px" }).setLngLat(geometry.coordinates).setDOMContent(damContent(popupText)).addTo(map)
+      })
+      const marker = new maplibregl.Marker({ element: b, anchor: "center" }).setLngLat(geometry.coordinates).addTo(map)
+      pins.set(`dam:${properties.id}`, { marker, el: b })
+    }
+  }
+
+  function damContent({ title, note, link }) {
+    const box = el("div", "popup")
+    const a = el("a", "official-link", link.text)
+    a.href = link.href
+    a.target = "_blank"
+    a.rel = "noopener"
+    box.append(el("span", "kind", "เขื่อน · จุดอ้างอิง"), el("span", "landmark", title), el("span", "meta", note), a)
+    return box
+  }
+
+  async function loadDams() {
+    if (state.dams.length) return
+    const res = await api("/data/dams.geojson")
+    if (res.status === 200 && res.body) state.dams = res.body.features
   }
 
   function popupContent(item) {

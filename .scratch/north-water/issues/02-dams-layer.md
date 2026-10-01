@@ -1,6 +1,6 @@
 # 02 · Dams as reference points
 
-Status: ready-for-agent
+Status: done
 Parent: [`../spec.md`](../spec.md) (Safety rules 4–5)
 Blocked by: 01
 

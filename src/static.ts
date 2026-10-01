@@ -22,6 +22,8 @@ const FILES: Record<string, { file: string; type: string }> = {
   // จังหวัด and อำเภอ outlines of the Chao Phraya basin, from HDX COD-AB (scripts/build-districts.mjs).
   "/data/basin-provinces.geojson": { file: "data/basin-provinces.geojson", type: "application/geo+json" },
   "/data/basin-districts.geojson": { file: "data/basin-districts.geojson", type: "application/geo+json" },
+  // Real เขื่อน as reference points, no release figures (north-water 02).
+  "/data/dams.geojson": { file: "data/dams.geojson", type: "application/geo+json" },
   ...vendoredFiles()
 }
 

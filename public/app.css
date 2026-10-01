@@ -610,3 +610,8 @@ label, legend { font-size: 13px; font-weight: 600; padding: 0; }
 .official a { color: var(--accent); font-weight: 600; font-size: 13.5px; }
 .official span { color: var(--muted); font-size: 12px; }
 .north .fineprint a { color: inherit; }
+
+/* เขื่อน reference pins (north-water 02) */
+.pin-dam { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; background: var(--solid); border: 1.5px solid var(--fg); color: var(--fg); }
+.pin-dam svg { width: 16px; height: 16px; }
+.popup .official-link { color: var(--accent); font-weight: 600; font-size: 13px; }
