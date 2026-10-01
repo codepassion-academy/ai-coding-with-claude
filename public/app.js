@@ -44,8 +44,11 @@
     basin: [],
     basinReports: [],
     // Which kind the report form sends: "flooded" from the flood tab, "arriving" from the north tab.
-    formKind: "flooded"
+    formKind: "flooded",
+    // The place the viewer asked an ETA for, [lon, lat]. Lives only in this page (safety rule 6).
+    etaPlace: null
   }
+  let etaMarker = null
   const pins = new Map()
   let map = null
   const hasTiles = { flood: false, north: false }
@@ -389,6 +392,23 @@
     return L.bannerFeatures([[b.getWest(), b.getSouth()], [b.getEast(), b.getNorth()]], state.scenario.label, state.scenarioOn)
   }
 
+  /** ETA for the chosen place at the scenario's speed, with its formula; a marker on the map. Never sent anywhere. */
+  function renderEta() {
+    etaMarker?.remove()
+    etaMarker = null
+    const result = $("eta-result")
+    if (!state.scenarioOn || !state.scenario || !state.etaPlace) {
+      result.textContent = ""
+      return
+    }
+    result.textContent = L.etaText(L.eta(state.etaPlace, state.scenario))
+    if (map && state.tab === "north") {
+      const dot = el("span", "pin pin-eta")
+      dot.setAttribute("aria-hidden", "true")
+      etaMarker = new maplibregl.Marker({ element: dot, anchor: "center" }).setLngLat(state.etaPlace).addTo(map)
+    }
+  }
+
   function renderScenarioPanel() {
     const button = $("scenario-toggle")
     button.setAttribute("aria-pressed", String(state.scenarioOn))
@@ -402,6 +422,16 @@
     $("scenario-t-out").textContent = L.formatT(step.t)
     $("scenario-label").textContent = state.scenario.label
     $("scenario-note").textContent = state.scenario.note
+    const places = $("eta-place")
+    if (places.options.length === 1) {
+      places.append(
+        ...L.ETA_PRESETS.map((p, i) => {
+          const o = el("option", null, p.name)
+          o.value = String(i)
+          return o
+        })
+      )
+    }
     const nameOf = (id) => state.dams.find((d) => d.properties.id === id)?.properties.nameTh ?? id
     $("scenario-releases").replaceChildren(
       ...step.releases.map((r) => {
@@ -678,6 +708,13 @@
       syncBasinLayers()
       syncScenarioLayers()
     })
+    // In the scenario, a tap on the map asks for an ETA there. The point stays in this page (safety rule 6).
+    map.on("click", (e) => {
+      if (state.tab !== "north" || !state.scenarioOn || !state.scenario) return
+      state.etaPlace = [e.lngLat.lng, e.lngLat.lat]
+      $("eta-place").value = ""
+      renderEta()
+    })
     // Keep the "ข้อมูลจำลอง" banner covering whatever is on screen.
     map.on("moveend", () => {
       const source = map.getSource("scenario-banner")
@@ -842,10 +879,18 @@
         toast("โหลดสถานการณ์จำลองไม่ได้ ลองใหม่อีกครั้ง")
       }
     }
+    if (!state.scenarioOn) state.etaPlace = null
     closePopup()
     renderScenarioPanel()
     syncScenarioLayers()
     renderPins()
+    renderEta()
+  })
+  $("eta-place").addEventListener("change", (e) => {
+    const preset = L.ETA_PRESETS[Number(e.target.value)]
+    state.etaPlace = e.target.value === "" || !preset ? null : preset.at
+    renderEta()
+    if (state.etaPlace && map) map.flyTo({ center: state.etaPlace, zoom: Math.max(map.getZoom(), 9) })
   })
   $("scenario-t").addEventListener("input", (e) => {
     state.t = Number(e.target.value)
@@ -863,6 +908,7 @@
     renderTab()
     render()
     renderScenarioPanel()
+    renderEta()
   })
   renderTab()
 

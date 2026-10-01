@@ -196,7 +196,52 @@
     return features
   }
 
+  const DEPTH_TH = { ankle: "ข้อเท้า", knee: "เข่า", waist: "เอว" }
+  const DEPTH_ORDER = { ankle: 1, knee: 2, waist: 3 }
+
+  /**
+   * When the scenario's water would reach `place` [lon, lat], and how deep (north-water 05). Snaps the place to
+   * the flow line, measures along the line from its start, divides by the scenario speed, and takes the deepest
+   * flood area covering the snapped point by then. Pure, and only ever called with the สถานการณ์จำลอง:
+   * the place never leaves the browser (safety rule 6).
+   */
+  function eta(place, scenario) {
+    const { km, offKm, point } = snapToLine(scenario.flowLine, place)
+    // Whole hours, rounded up; max(0, …) so the source is T+0, not T+-0.
+    const arrivalT = Math.max(0, Math.ceil(km / scenario.speedKmh - 1e-9))
+    let depthLevel = null
+    for (const area of scenario.floodAreas) {
+      if (area.fromT > arrivalT || haversineKm(point, area.centre) > area.radiusKm) continue
+      if (!depthLevel || DEPTH_ORDER[area.depthLevel] > DEPTH_ORDER[depthLevel]) depthLevel = area.depthLevel
+    }
+    return { distanceKm: km, speedKmh: scenario.speedKmh, arrivalT, depthLevel, offKm, beyondScenario: arrivalT > scenario.maxT }
+  }
+
+  /** The ETA with its formula and inputs, never just the answer: "ระยะทาง X กม. ÷ Y กม./ชม. ≈ T+Z ชม., ระดับ…". */
+  function etaText(e) {
+    let text = `ระยะทาง ${e.distanceKm.toFixed(1)} กม. ÷ ${e.speedKmh} กม./ชม. ≈ ${formatT(e.arrivalT)}`
+    text += e.depthLevel ? `, ระดับ${DEPTH_TH[e.depthLevel]}` : ", ไม่อยู่ในพื้นที่น้ำท่วมของสถานการณ์จำลองนี้"
+    if (e.offKm >= 0.5) text += ` · ห่างจากเส้นทางน้ำ ${e.offKm.toFixed(1)} กม.`
+    if (e.beyondScenario) text += " · เลยช่วงเวลาของสถานการณ์จำลอง"
+    return text
+  }
+
+  /** Places to try without tapping the map. Rough town centres; the ETA only ever uses them in the browser. */
+  const ETA_PRESETS = [
+    { name: "ดอนเมือง", at: [100.6068, 13.9126] },
+    { name: "นนทบุรี", at: [100.496, 13.861] },
+    { name: "ปทุมธานี", at: [100.53, 14.02] },
+    { name: "อยุธยา", at: [100.577, 14.353] },
+    { name: "อ่างทอง", at: [100.455, 14.589] },
+    { name: "สิงห์บุรี", at: [100.401, 14.891] },
+    { name: "ชัยนาท", at: [100.125, 15.186] },
+    { name: "นครสวรรค์", at: [100.126, 15.7] }
+  ]
+
   window.NAMTUAM_LOGIC = {
+    eta,
+    etaText,
+    ETA_PRESETS,
     errorMessage,
     ageLabel,
     bangkokIso,
