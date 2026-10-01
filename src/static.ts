@@ -16,17 +16,49 @@ const FILES: Record<string, { file: string; type: string }> = {
   "/fonts/noto-sans-thai-latin.woff2": { file: "fonts/noto-sans-thai-latin.woff2", type: "font/woff2" },
   "/app.css": { file: "app.css", type: "text/css; charset=utf-8" },
   // Protomaps extract of Bangkok (ADR 0001). Not in git; see README for how to make it.
-  "/tiles/bangkok.pmtiles": { file: "tiles/bangkok.pmtiles", type: "application/octet-stream" }
+  "/tiles/bangkok.pmtiles": { file: "tiles/bangkok.pmtiles", type: "application/octet-stream" },
+  ...vendoredFiles()
 }
 
-/** Glyphs and sprites for the basemap still come from Protomaps' asset host until we self-host them (ADR 0001). */
+/**
+ * Map assets pinned and checked by scripts/vendor-map.sh (public/vendor/SHA256SUMS), so the page loads
+ * nothing from another site (ADR 0001). Glyph URLs keep the font stack name MapLibre asks for, with the
+ * space encoded; on disk the folder has no spaces.
+ */
+function vendoredFiles(): Record<string, { file: string; type: string }> {
+  const js = "text/javascript; charset=utf-8"
+  const files: Record<string, { file: string; type: string }> = {
+    "/vendor/maplibre-gl.js": { file: "vendor/maplibre-gl.js", type: js },
+    "/vendor/maplibre-gl.css": { file: "vendor/maplibre-gl.css", type: "text/css; charset=utf-8" },
+    "/vendor/pmtiles.js": { file: "vendor/pmtiles.js", type: js },
+    "/vendor/basemaps.js": { file: "vendor/basemaps.js", type: js },
+    "/vendor/glyphs/OFL.txt": { file: "vendor/glyphs/OFL.txt", type: "text/plain; charset=utf-8" }
+  }
+  for (const face of ["Regular", "Medium"]) {
+    for (const range of ["0-255", "256-511", "3584-3839", "8192-8447"]) {
+      files[`/vendor/glyphs/Noto%20Sans%20${face}/${range}.pbf`] = {
+        file: `vendor/glyphs/noto-sans-${face.toLowerCase()}/${range}.pbf`,
+        type: "application/x-protobuf"
+      }
+    }
+  }
+  for (const flavor of ["light", "dark"]) {
+    for (const scale of ["", "@2x"]) {
+      files[`/vendor/sprites/${flavor}${scale}.json`] = { file: `vendor/sprites/${flavor}${scale}.json`, type: "application/json" }
+      files[`/vendor/sprites/${flavor}${scale}.png`] = { file: `vendor/sprites/${flavor}${scale}.png`, type: "image/png" }
+    }
+  }
+  return files
+}
+
+/** Everything comes from this server (ADR 0001). MapLibre still needs blob: workers. */
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' https://unpkg.com",
-  "style-src 'self' https://unpkg.com",
+  "script-src 'self'",
+  "style-src 'self'",
   "img-src 'self' data: blob:",
   "font-src 'self'",
-  "connect-src 'self' https://protomaps.github.io",
+  "connect-src 'self'",
   "worker-src blob:",
   "child-src blob:",
   "object-src 'none'",
@@ -78,6 +110,8 @@ export function serveStatic(req: IncomingMessage, res: ServerResponse, path: str
   }
 
   if (path.startsWith("/fonts/")) headers["cache-control"] = "public, max-age=31536000, immutable"
+  // Vendored URLs carry no version, so a bump must reach browsers: cache for a day, not for good.
+  if (path.startsWith("/vendor/")) headers["cache-control"] = "public, max-age=86400"
 
   if (path.startsWith("/tiles/")) {
     headers["accept-ranges"] = "bytes"
