@@ -1,6 +1,7 @@
 import { randomBytes, randomUUID } from "node:crypto"
 import { checkBearer, createAuthFailureLimiter, isAdminEnabled } from "./admin.ts"
 import { districts } from "./districts.ts"
+import { createReportLog, type LogFn } from "./report-log.ts"
 import { createMemoryReportStore, type ReportStore } from "./report-store.ts"
 import { hashReporter } from "./reporter.ts"
 import {
@@ -21,13 +22,14 @@ export type Response = { status: number; body: unknown; headers?: Record<string,
 
 export type Context = { now: Date; clientIp?: string; authorization?: string }
 
-export type AppDeps = { store: ReportStore; ipHashSecret: string; adminToken?: string }
+export type AppDeps = { store: ReportStore; ipHashSecret: string; adminToken?: string; log?: LogFn }
 
 export const NOTICE = "ตัวอย่างเพื่อการเรียนเท่านั้น ไม่ใช่ประกาศเตือนภัยทางการ ข้อมูลเป็นข้อมูลสมมติ"
 
 /** Build a router around its own dependencies. Tests use this with a fresh memory store. */
 export function createApp(deps: AppDeps): typeof handle {
   const authFailures = createAuthFailureLimiter()
+  const reportLog = createReportLog(deps.log)
 
   return (method, path, body, ctx = { now: new Date() }): Response => {
     if (path.startsWith("/admin/")) {
@@ -46,6 +48,7 @@ export function createApp(deps: AppDeps): typeof handle {
       }
       if (!checkBearer(ctx.authorization, adminToken)) {
         authFailures.recordFailure(who, ctx.now)
+        reportLog.adminAuthFailed()
         return { status: 401, body: { error: "unauthorized" }, headers: { "WWW-Authenticate": "Bearer" } }
       }
 
@@ -59,7 +62,9 @@ export function createApp(deps: AppDeps): typeof handle {
         if (!current) return { status: 404, body: { error: "unknown report" } }
         // Repeating the action changes nothing: the first hiddenAt stays, an unhidden report stays unhidden.
         const wanted = action === "hide" ? (current.hiddenAt ?? ctx.now.toISOString()) : null
-        const report = wanted === current.hiddenAt ? current : (deps.store.setHidden(id, wanted) ?? current)
+        const changed = wanted !== current.hiddenAt
+        const report = changed ? (deps.store.setHidden(id, wanted) ?? current) : current
+        if (changed) (action === "hide" ? reportLog.hidden : reportLog.unhidden)(id, current.districtId)
         return { status: 200, body: { report: adminItem(report) } }
       }
       return { status: 404, body: { error: "not found" } }
@@ -91,6 +96,7 @@ export function createApp(deps: AppDeps): typeof handle {
       const reporterHash = hashReporter(deps.ipHashSecret, ctx.clientIp)
       const quota = rateLimitStatus(deps.store.all(), reporterHash, ctx.now)
       if (quota.limited) {
+        reportLog.rejectedRateLimit()
         return {
           status: 429,
           body: { error: "rate limit exceeded", retryAfterSeconds: quota.retryAfterSeconds },
@@ -99,7 +105,10 @@ export function createApp(deps: AppDeps): typeof handle {
       }
 
       const checked = validateReportInput(body, ctx.now)
-      if (!checked.ok) return { status: 400, body: { error: "invalid report", fields: checked.fields } }
+      if (!checked.ok) {
+        reportLog.rejectedValidation(checked.fields)
+        return { status: 400, body: { error: "invalid report", fields: checked.fields } }
+      }
       const { districtId, landmark, depthCm, observedAt } = checked.input
       const report: Report = {
         id: randomUUID(),
@@ -113,6 +122,7 @@ export function createApp(deps: AppDeps): typeof handle {
         hiddenAt: null
       }
       deps.store.add(report)
+      reportLog.accepted(report.id, districtId)
       return {
         status: 201,
         body: {

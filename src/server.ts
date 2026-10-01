@@ -19,7 +19,9 @@ if (adminToken !== undefined && !isAdminEnabled(adminToken)) {
 const app = createApp({
   store: createFileReportStore(process.env.REPORTS_FILE ?? "var/reports.json"),
   ipHashSecret,
-  adminToken
+  adminToken,
+  // One JSON line per event on stdout. The app only ever passes allowed fields (src/report-log.ts).
+  log: (event, fields) => console.log(JSON.stringify({ event, ...fields }))
 })
 
 createServer((req, res) => {
